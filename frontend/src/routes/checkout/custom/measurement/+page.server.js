@@ -28,7 +28,7 @@ export async function load({ locals, fetch }) {
 }
 
 export const actions = {
-    save: async ({ locals, request, fetch }) => {
+    default: async ({ locals, request, fetch }) => {
         const user = locals.authUser;
         if (!user || user.type !== 'customer') {
             throw redirect(302, '/auth/login');
