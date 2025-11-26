@@ -1,0 +1,25 @@
+{
+  "name": "luckystar-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "db:init": "node scripts/test-init-db.js",
+    "db:seed": "node scripts/seed-test-data.js",
+    "db:seed:dev": "node scripts/seed-dev-data.js",
+    "db:reset": "npm run db:init && npm run db:seed",
+    "db:health": "node scripts/check-db-health.js",
+    "db:backup": "node scripts/backup-db.js",
+    "db:mode:dev": "node -e \"import db,{setDatabaseMode} from './src/database/db.js'; setDatabaseMode('dev'); process.exit(0);\"",
+    "db:mode:prod": "node -e \"import db,{setDatabaseMode} from './src/database/db.js'; setDatabaseMode('prod'); process.exit(0);\"",
+    "admin:create": "node scripts/create-admin.js",
+    "hash": "node scripts/generate-hash.js",
+    "clean": "rm -rf data/app.db data/app.db-* logs/*.log",
+    "reset:dev": "bash scripts/reset-dev.sh"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.6",
+    "multer": "^2.0.2"
+  }
+}

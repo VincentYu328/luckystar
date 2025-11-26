@@ -1,0 +1,17 @@
+export function GET() {
+  const body = `
+User-agent: *
+Allow: /
+
+# 禁止搜索引擎抓取后台管理
+Disallow: /admin
+
+Sitemap: https://luckystar.co.nz/sitemap.xml
+  `.trim();
+
+  return new Response(body, {
+    headers: {
+      'Content-Type': 'text/plain'
+    }
+  });
+}
