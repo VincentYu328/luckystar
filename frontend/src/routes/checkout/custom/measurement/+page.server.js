@@ -3,9 +3,9 @@ import { redirect } from '@sveltejs/kit';
 import { SERVER_API_URL } from '$env/static/private';
 
 export async function load({ locals, fetch }) {
-    // ⭐ 正确字段是 locals.user，不是 locals.authUser
-    const user = locals.user;
-    if (!user) {
+    const user = locals.authUser;
+
+    if (!user || user.type !== 'customer') {
         throw redirect(302, '/auth/login?redirect=/checkout/custom/measurement');
     }
 
@@ -29,8 +29,10 @@ export async function load({ locals, fetch }) {
 
 export const actions = {
     save: async ({ locals, request, fetch }) => {
-        const user = locals.user;
-        if (!user) throw redirect(302, '/auth/login');
+        const user = locals.authUser;
+        if (!user || user.type !== 'customer') {
+            throw redirect(302, '/auth/login');
+        }
 
         const form = await request.formData();
         const payload = Object.fromEntries(form);
