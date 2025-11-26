@@ -7,7 +7,7 @@ function buildCookieHeader(cookies) {
     return pairs.length ? pairs.join('; ') : '';
 }
 
-export async function load({ locals, fetch, cookies }) {
+export async function load({ locals, fetch, cookies, url }) {
     const user = locals.authUser;
 
     if (!user || user.type !== 'customer') {
@@ -28,9 +28,14 @@ export async function load({ locals, fetch, cookies }) {
         data = {};
     }
 
+    const successMessage = url.searchParams.get('saved') === '1'
+        ? 'Your measurements have been saved.'
+        : null;
+
     return {
         user,
-        measurements: data.measurements || null
+        measurements: data.measurements || null,
+        successMessage
     };
 }
 
@@ -61,6 +66,6 @@ export const actions = {
             throw redirect(303, '/checkout/custom/measurement?error=save_failed');
         }
 
-        throw redirect(303, '/my/measurements');
+        throw redirect(303, '/checkout/custom/measurement?saved=1');
     }
 };

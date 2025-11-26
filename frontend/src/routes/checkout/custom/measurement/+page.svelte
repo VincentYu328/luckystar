@@ -18,6 +18,12 @@
 
   <h1 class="text-3xl font-semibold">Your Measurements</h1>
 
+  {#if data.successMessage}
+    <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+      {data.successMessage}
+    </div>
+  {/if}
+
   <form method="POST" class="space-y-6">
 
     <div class="grid grid-cols-2 gap-6">
@@ -61,8 +67,6 @@
 
     <button
       type="submit"
-      name="action"
-      value="save"
       class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
     >
       Save Measurements
