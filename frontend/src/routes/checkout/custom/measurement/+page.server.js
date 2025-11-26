@@ -2,7 +2,12 @@
 import { redirect } from '@sveltejs/kit';
 import { SERVER_API_URL } from '$env/static/private';
 
-export async function load({ locals, fetch }) {
+function buildCookieHeader(cookies) {
+    const pairs = cookies.getAll().map(({ name, value }) => `${name}=${value}`);
+    return pairs.length ? pairs.join('; ') : '';
+}
+
+export async function load({ locals, fetch, cookies }) {
     const user = locals.authUser;
 
     if (!user || user.type !== 'customer') {
@@ -10,9 +15,11 @@ export async function load({ locals, fetch }) {
     }
 
     const url = `${SERVER_API_URL}/api/customers/me/measurements`;
+    const cookieHeader = buildCookieHeader(cookies);
 
-    // ⭐ SvelteKit 内置 fetch 自动带 cookie，无需 headers.cookie
-    const res = await fetch(url);
+    const res = await fetch(url, {
+        headers: cookieHeader ? { cookie: cookieHeader } : {}
+    });
 
     let data = {};
     try {
@@ -28,7 +35,7 @@ export async function load({ locals, fetch }) {
 }
 
 export const actions = {
-    default: async ({ locals, request, fetch }) => {
+    default: async ({ locals, request, fetch, cookies }) => {
         const user = locals.authUser;
         if (!user || user.type !== 'customer') {
             throw redirect(302, '/auth/login');
@@ -38,11 +45,13 @@ export const actions = {
         const payload = Object.fromEntries(form);
 
         const url = `${SERVER_API_URL}/api/customers/me/measurements`;
+        const cookieHeader = buildCookieHeader(cookies);
 
         const res = await fetch(url, {
-            method: 'POST',
+            method: 'PUT',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...(cookieHeader ? { cookie: cookieHeader } : {})
             },
             body: JSON.stringify(payload)
         });
