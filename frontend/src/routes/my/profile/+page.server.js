@@ -1,8 +1,12 @@
-// src/routes/my/profile/+page.server.js
 import { redirect, fail } from '@sveltejs/kit';
 import { SERVER_API_URL } from '$env/static/private';
 
-export async function load({ locals, url }) {
+function buildCookieHeader(cookies) {
+  const pairs = cookies.getAll().map(({ name, value }) => `${name}=${value}`);
+  return pairs.length ? pairs.join('; ') : '';
+}
+
+export async function load({ locals, url, fetch, cookies }) {
   const authUser = locals.authUser;
 
   if (!authUser || authUser.type !== 'customer') {
@@ -10,13 +14,44 @@ export async function load({ locals, url }) {
     throw redirect(302, `/auth/login?redirect=${redirectTo}`);
   }
 
+  let profile = {
+    id: authUser.id,
+    full_name: authUser.full_name,
+    email: authUser.email,
+    phone: authUser.phone ?? ''
+  };
+
+  const cookieHeader = buildCookieHeader(cookies);
+
+  try {
+    const resp = await fetch(`${SERVER_API_URL}/api/customers/me`, {
+      headers: cookieHeader ? { cookie: cookieHeader } : {}
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data) profile = data;
+    } else {
+      console.error('Profile load failed:', await resp.text());
+      console.log('[profile action] cookieHeader:', cookieHeader);
+    }
+  } catch (err) {
+    console.error('Profile load error:', err);
+  }
+
+  const successMessage =
+    url.searchParams.get('saved') === '1'
+      ? 'Your profile has been updated.'
+      : null;
+
   return {
-    user: authUser
+    user: profile,
+    successMessage
   };
 }
 
 export const actions = {
-  save: async ({ request, locals, fetch, cookies }) => {
+  default: async ({ request, locals, fetch, cookies }) => {
     const user = locals.authUser;
     if (!user || user.type !== 'customer') {
       throw redirect(302, '/auth/login');
@@ -30,19 +65,14 @@ export const actions = {
       return fail(400, { error: 'Full name is required.' });
     }
 
-    // ⭐ 使用环境变量 SERVER_API_URL（本地/线上自动切换）
     const apiUrl = `${SERVER_API_URL}/api/customers/me`;
+    const cookieHeader = buildCookieHeader(cookies);
 
     const res = await fetch(apiUrl, {
       method: 'PUT',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-
-        // 必须手动带 Session Cookie（SSR 才能携带）
-        cookie: cookies.get('session')
-          ? `session=${cookies.get('session')}`
-          : ''
+        ...(cookieHeader ? { cookie: cookieHeader } : {})
       },
       body: JSON.stringify({ full_name, phone })
     });
@@ -52,6 +82,6 @@ export const actions = {
       return fail(500, { error: 'Failed to update profile.' });
     }
 
-    throw redirect(303, '/my/profile');
+    throw redirect(303, '/my/profile?saved=1');
   }
 };

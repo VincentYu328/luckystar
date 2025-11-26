@@ -8,34 +8,33 @@ import CustomerAuthService from '../services/customerAuthService.js';
 import CustomersDAO from '../data/customers-dao.js';
 
 export function requireCustomerAuth(req, res, next) {
-    const token = req.cookies?.access_token;
+  const token = req.cookies?.access_token;
 
-    if (!token) {
-        return res.status(401).json({ error: 'Not logged in' });
+  if (!token) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+
+  try {
+    console.log('[customerAuth] token header:', token);
+
+    const decoded = CustomerAuthService.verifyAccess(token);
+    console.log('[customerAuth] token payload:', decoded);
+
+    const customer = CustomersDAO.getCustomerById(decoded.customerId);
+    if (!customer || !customer.is_active) {
+      return res.status(401).json({ error: 'Customer not found or inactive' });
     }
 
-    try {
-        // 解码 access token
-        const decoded = CustomerAuthService.verifyAccess(token);
+    req.customer = {
+      id: customer.id,
+      full_name: customer.full_name,
+      email: customer.email,
+      phone: customer.phone
+    };
 
-        // 检查客户是否仍存在
-        const customer = CustomersDAO.getCustomerById(decoded.customerId);
-        if (!customer || !customer.is_active) {
-            return res.status(401).json({ error: 'Customer not found or inactive' });
-        }
-
-        // 注入 req.customer
-        req.customer = {
-            id: customer.id,
-            full_name: customer.full_name,
-            email: customer.email,
-            phone: customer.phone
-        };
-
-        next();
-
-    } catch (err) {
-        console.error('Customer Auth failed:', err);
-        return res.status(401).json({ error: 'Invalid or expired customer token' });
-    }
+    next();
+  } catch (err) {
+    console.error('Customer Auth failed:', err);
+    return res.status(401).json({ error: 'Invalid or expired customer token' });
+  }
 }

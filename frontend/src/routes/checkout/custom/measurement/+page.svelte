@@ -18,51 +18,90 @@
 
   <h1 class="text-3xl font-semibold">Your Measurements</h1>
 
+  {#if data.successMessage}
+    <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+      {data.successMessage}
+    </div>
+  {/if}
+
   <form method="POST" class="space-y-6">
 
     <div class="grid grid-cols-2 gap-6">
 
       <div>
-        <label class="text-sm">Height (cm)</label>
-        <input name="height" class="border rounded p-2 w-full" bind:value={m.height} />
+        <label class="text-sm" for="height">Height (cm)</label>
+        <input
+          id="height"
+          name="height"
+          class="border rounded p-2 w-full"
+          bind:value={m.height}
+        />
       </div>
 
       <div>
-        <label class="text-sm">Chest (cm)</label>
-        <input name="chest" class="border rounded p-2 w-full" bind:value={m.chest} />
+        <label class="text-sm" for="chest">Chest (cm)</label>
+        <input
+          id="chest"
+          name="chest"
+          class="border rounded p-2 w-full"
+          bind:value={m.chest}
+        />
       </div>
 
       <div>
-        <label class="text-sm">Waist (cm)</label>
-        <input name="waist" class="border rounded p-2 w-full" bind:value={m.waist} />
+        <label class="text-sm" for="waist">Waist (cm)</label>
+        <input
+          id="waist"
+          name="waist"
+          class="border rounded p-2 w-full"
+          bind:value={m.waist}
+        />
       </div>
 
       <div>
-        <label class="text-sm">Hip (cm)</label>
-        <input name="hip" class="border rounded p-2 w-full" bind:value={m.hip} />
+        <label class="text-sm" for="hip">Hip (cm)</label>
+        <input
+          id="hip"
+          name="hip"
+          class="border rounded p-2 w-full"
+          bind:value={m.hip}
+        />
       </div>
 
       <div>
-        <label class="text-sm">Shoulder Width (cm)</label>
-        <input name="shoulder_width" class="border rounded p-2 w-full" bind:value={m.shoulder_width} />
+        <label class="text-sm" for="shoulder">Shoulder Width (cm)</label>
+        <input
+          id="shoulder"
+          name="shoulder_width"
+          class="border rounded p-2 w-full"
+          bind:value={m.shoulder_width}
+        />
       </div>
 
       <div>
-        <label class="text-sm">Sleeve Length (cm)</label>
-        <input name="sleeve_length" class="border rounded p-2 w-full" bind:value={m.sleeve_length} />
+        <label class="text-sm" for="sleeve">Sleeve Length (cm)</label>
+        <input
+          id="sleeve"
+          name="sleeve_length"
+          class="border rounded p-2 w-full"
+          bind:value={m.sleeve_length}
+        />
       </div>
 
       <div>
-        <label class="text-sm">Inseam (cm)</label>
-        <input name="inseam" class="border rounded p-2 w-full" bind:value={m.inseam} />
+        <label class="text-sm" for="inseam">Inseam (cm)</label>
+        <input
+          id="inseam"
+          name="inseam"
+          class="border rounded p-2 w-full"
+          bind:value={m.inseam}
+        />
       </div>
 
     </div>
 
     <button
       type="submit"
-      name="action"
-      value="save"
       class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
     >
       Save Measurements

@@ -207,6 +207,40 @@ class CustomersDAO {
     `).run(...params);
   }
 
+  static createMyMeasurements(customerId, fields) {
+    return db.prepare(`
+      INSERT INTO measurements (
+        customer_id,
+        group_member_id,
+        source,
+        unit,
+        height,
+        chest,
+        waist,
+        hip,
+        shoulder_width,
+        sleeve_length,
+        inseam,
+        notes,
+        measured_by,
+        measured_at
+      ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      customerId,
+      fields.source || 'customer_portal',
+      fields.unit || 'cm',
+      fields.height || null,
+      fields.chest || null,
+      fields.waist || null,
+      fields.hip || null,
+      fields.shoulder_width || null,
+      fields.sleeve_length || null,
+      fields.inseam || null,
+      fields.notes || null,
+      fields.measured_by || null   // ← 不再填字符串，保持 NULL
+    );
+  }
+
 
   // =====================================================
   // ========= ⭐⭐ My Orders（顾客端）⭐⭐ =========

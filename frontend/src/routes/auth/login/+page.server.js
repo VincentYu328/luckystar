@@ -31,7 +31,8 @@ export const actions = {
       return fail(400, { error: 'Email and password are required' });
     }
 
-    const apiURL = `${SERVER_API_URL}/api/auth/login${isStaff ? '/staff' : ''}`;
+    const apiPath = isStaff ? '/api/auth/login' : '/api/customer-auth/login';
+    const apiURL = `${SERVER_API_URL}${apiPath}`;
     
     // ⭐ 调试信息
     console.log('🔍 Login API URL:', apiURL);
@@ -55,19 +56,70 @@ export const actions = {
     const data = await res.json();
     console.log('✅ Login response:', JSON.stringify(data, null, 2));
 
-    cookies.set('access_token', data.access_token, {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false
-    });
+    const applySetCookie = (cookieStr) => {
+      const parts = cookieStr.split(';').map((part) => part.trim()).filter(Boolean);
+      if (!parts.length) return;
+
+      const [nameValue, ...attrParts] = parts;
+      const [rawName, ...rawValueParts] = nameValue.split('=');
+      const name = rawName;
+      const value = rawValueParts.join('=');
+
+      if (!name) return;
+
+      const opts = { path: '/' };
+
+      for (const attr of attrParts) {
+        const [attrName, ...attrValueParts] = attr.split('=');
+        const attrValue = attrValueParts.join('=');
+        switch (attrName.toLowerCase()) {
+          case 'path':
+            opts.path = attrValue || '/';
+            break;
+          case 'domain':
+            opts.domain = attrValue;
+            break;
+          case 'max-age':
+            opts.maxAge = Number(attrValue);
+            break;
+          case 'expires':
+            opts.expires = new Date(attrValue);
+            break;
+          case 'secure':
+            opts.secure = true;
+            break;
+          case 'httponly':
+            opts.httpOnly = true;
+            break;
+          case 'samesite': {
+            const valueLower = attrValue?.toLowerCase();
+            if (valueLower === 'none' || valueLower === 'lax' || valueLower === 'strict') {
+              opts.sameSite = valueLower;
+            }
+            break;
+          }
+        }
+      }
+
+      cookies.set(name, value, opts);
+    };
+
+    const cookieHeaders =
+      (typeof res.headers.getSetCookie === 'function' && res.headers.getSetCookie()) ||
+      res.headers.raw?.()['set-cookie'] ||
+      (res.headers.get('set-cookie') ? [res.headers.get('set-cookie')] : []);
+
+    cookieHeaders.forEach(applySetCookie);
+
+    const userType = data.user ? 'staff' : 'customer';
+    const profile = data.user ?? data.customer ?? null;
 
     console.log('🔀 Redirect to:', redirectTo);
-    console.log('👤 User type:', data.user?.type);
+    console.log('👤 User type:', userType);
 
     if (redirectTo) throw redirect(302, redirectTo);
-    if (data.user?.type === 'customer') throw redirect(302, '/my');
-    if (data.user?.type === 'staff') throw redirect(302, '/admin');
+    if (profile && userType === 'customer') throw redirect(302, '/my');
+    if (profile && userType === 'staff') throw redirect(302, '/admin');
 
     throw redirect(302, '/');
   }

@@ -3,6 +3,7 @@ import CustomerService from '../services/customerService.js';
 import RetailOrderService from '../services/retailOrderService.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireCustomerAuth } from '../middleware/customerAuth.js';
 
 const router = express.Router();
 
@@ -15,6 +16,75 @@ function isSelf(req) {
     Number(req.params.id) === req.user.customerId
   );
 }
+
+
+/* ======================================================
+   MY 页面（customer 前台）
+====================================================== */
+
+// GET /api/customers/me
+router.get('/me', requireCustomerAuth, (req, res) => {
+  const me = CustomerService.getCustomerById(req.customer.id);
+  res.json(me);
+});
+
+// PUT /api/customers/me  ← 更新 Profile
+router.put('/me', requireCustomerAuth, (req, res) => {
+  try {
+    const updated = CustomerService.updateMyProfile(req.customer.id, req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/* ============================
+   MY — Profile
+============================ */
+
+router.get('/me/profile', requireCustomerAuth, (req, res) => {
+  const me = CustomerService.getMyProfile(req.customer.id);
+  res.json({ profile: me });
+});
+
+router.put('/me/profile', requireCustomerAuth, (req, res) => {
+  try {
+    CustomerService.updateMyProfile(req.customer.id, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/* ============================
+   MY — Measurements（顾客端）
+============================ */
+
+// GET 最新一条测量
+router.get('/me/measurements', requireCustomerAuth, (req, res) => {
+  const m = CustomerService.getMyMeasurements(req.customer.id);
+  res.json({ measurements: m });
+});
+
+// PUT 更新顾客自己的测量
+router.put('/me/measurements', requireCustomerAuth, (req, res) => {
+  try {
+    CustomerService.updateMyMeasurements(req.customer.id, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/* ============================
+   MY — Retail Orders
+============================ */
+
+router.get('/me/orders', requireCustomerAuth, (req, res) => {
+  const orders = CustomerService.getMyOrders(req.customer.id);
+  res.json({ orders });
+});
+
 
 /* ======================================================
    Customers（后台 staff + customer 自身访问）
@@ -266,97 +336,5 @@ router.delete(
     }
   }
 );
-
-/* ======================================================
-   MY 页面（customer 前台）
-====================================================== */
-
-// GET /api/customers/me
-router.get('/me', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer') {
-    return res.status(403).json({ error: 'Staff cannot use /me' });
-  }
-
-  const me = CustomerService.getCustomerById(req.user.customerId);
-  res.json(me);
-});
-
-// PUT /api/customers/me  ← 更新 Profile
-router.put('/me', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer')
-    return res.status(403).json({ error: 'Staff cannot use /me' });
-
-  try {
-    const updated = CustomerService.updateMyProfile(
-      req.user.customerId,
-      req.body
-    );
-    res.json(updated);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-/* ============================
-   MY — Profile
-============================ */
-
-router.get('/me/profile', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer')
-    return res.status(403).json({ error: 'Staff cannot access /me/profile' });
-
-  const me = CustomerService.getMyProfile(req.user.customerId);
-  res.json({ profile: me });
-});
-
-router.put('/me/profile', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer')
-    return res.status(403).json({ error: 'Staff cannot update /me/profile' });
-
-  try {
-    CustomerService.updateMyProfile(req.user.customerId, req.body);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-/* ============================
-   MY — Measurements（顾客端）
-============================ */
-
-// GET 最新一条测量
-router.get('/me/measurements', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer')
-    return res.status(403).json({ error: 'Staff cannot use /me/measurements' });
-
-  const m = CustomerService.getMyMeasurements(req.user.customerId);
-  res.json({ measurements: m });
-});
-
-// PUT 更新顾客自己的测量
-router.put('/me/measurements', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer')
-    return res.status(403).json({ error: 'Staff cannot update /me/measurements' });
-
-  try {
-    CustomerService.updateMyMeasurements(req.user.customerId, req.body);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-/* ============================
-   MY — Retail Orders
-============================ */
-
-router.get('/me/orders', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer')
-    return res.status(403).json({ error: 'Staff cannot use /me/orders' });
-
-  const orders = CustomerService.getMyOrders(req.user.customerId);
-  res.json({ orders });
-});
 
 export default router;

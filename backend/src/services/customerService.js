@@ -265,9 +265,12 @@ class CustomerService {
     }
 
     static updateMyMeasurements(customerId, fields) {
+        const existing = CustomersDAO.getMyMeasurements(customerId);
+        if (!existing) {
+            return CustomersDAO.createMyMeasurements(customerId, fields);
+        }
         return CustomersDAO.updateMyMeasurements(customerId, fields);
     }
-
 
     // =====================================================
     // ⭐⭐⭐ 顾客端：My Orders ⭐⭐⭐

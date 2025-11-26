@@ -1,3 +1,5 @@
+// backend\src\middleware\auth.js
+
 import AuthService from '../services/authService.js';
 import UsersDAO from '../data/users-dao.js';
 
