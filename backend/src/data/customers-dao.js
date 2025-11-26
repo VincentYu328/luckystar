@@ -228,8 +228,8 @@ class CustomersDAO {
       ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `).run(
       customerId,
-      'customer_portal',
-      'cm',
+      fields.source || 'customer_portal',
+      fields.unit || 'cm',
       fields.height || null,
       fields.chest || null,
       fields.waist || null,
@@ -238,7 +238,7 @@ class CustomersDAO {
       fields.sleeve_length || null,
       fields.inseam || null,
       fields.notes || null,
-      'customer_self'
+      fields.measured_by || null
     );
   }
 
