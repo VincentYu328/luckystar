@@ -207,6 +207,7 @@ class CustomersDAO {
     `).run(...params);
   }
 
+
   static createMyMeasurements(customerId, fields) {
     return db.prepare(`
       INSERT INTO measurements (
