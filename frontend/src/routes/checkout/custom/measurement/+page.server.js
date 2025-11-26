@@ -7,7 +7,7 @@ function buildCookieHeader(cookies) {
     return pairs.length ? pairs.join('; ') : '';
 }
 
-export async function load({ locals, fetch, cookies, url }) {
+export async function load({ locals, fetch, cookies, url: requestUrl }) {
     const user = locals.authUser;
 
     if (!user || user.type !== 'customer') {
@@ -28,7 +28,7 @@ export async function load({ locals, fetch, cookies, url }) {
         data = {};
     }
 
-    const successMessage = url.searchParams.get('saved') === '1'
+    const successMessage = requestUrl.searchParams.get('saved') === '1'
         ? 'Your measurements have been saved.'
         : null;
 
