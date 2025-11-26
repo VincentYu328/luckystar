@@ -30,37 +30,72 @@
 
       <div>
         <label class="text-sm" for="height">Height (cm)</label>
-        <input id="height" name="height" class="border rounded p-2 w-full" bind:value={m.height} />
+        <input
+          id="height"
+          name="height"
+          class="border rounded p-2 w-full"
+          bind:value={m.height}
+        />
       </div>
 
       <div>
         <label class="text-sm" for="chest">Chest (cm)</label>
-        <input id="chest" name="chest" class="border rounded p-2 w-full" bind:value={m.chest} />
+        <input
+          id="chest"
+          name="chest"
+          class="border rounded p-2 w-full"
+          bind:value={m.chest}
+        />
       </div>
 
       <div>
         <label class="text-sm" for="waist">Waist (cm)</label>
-        <input id="waist" name="waist" class="border rounded p-2 w-full" bind:value={m.waist} />
+        <input
+          id="waist"
+          name="waist"
+          class="border rounded p-2 w-full"
+          bind:value={m.waist}
+        />
       </div>
 
       <div>
         <label class="text-sm" for="hip">Hip (cm)</label>
-        <input id="hip" name="hip" class="border rounded p-2 w-full" bind:value={m.hip} />
+        <input
+          id="hip"
+          name="hip"
+          class="border rounded p-2 w-full"
+          bind:value={m.hip}
+        />
       </div>
 
       <div>
         <label class="text-sm" for="shoulder">Shoulder Width (cm)</label>
-        <input id="shoulder" name="shoulder_width" class="border rounded p-2 w-full" bind:value={m.shoulder_width} />
+        <input
+          id="shoulder"
+          name="shoulder_width"
+          class="border rounded p-2 w-full"
+          bind:value={m.shoulder_width}
+        />
       </div>
 
       <div>
         <label class="text-sm" for="sleeve">Sleeve Length (cm)</label>
-        <input id="sleeve" name="sleeve_length" class="border rounded p-2 w-full" bind:value={m.sleeve_length} />
+        <input
+          id="sleeve"
+          name="sleeve_length"
+          class="border rounded p-2 w-full"
+          bind:value={m.sleeve_length}
+        />
       </div>
 
       <div>
         <label class="text-sm" for="inseam">Inseam (cm)</label>
-        <input id="inseam" name="inseam" class="border rounded p-2 w-full" bind:value={m.inseam} />
+        <input
+          id="inseam"
+          name="inseam"
+          class="border rounded p-2 w-full"
+          bind:value={m.inseam}
+        />
       </div>
 
     </div>

@@ -7,7 +7,8 @@ function buildCookieHeader(cookies) {
     return pairs.length ? pairs.join('; ') : '';
 }
 
-export async function load({ locals, fetch, cookies, url: requestUrl }) {
+export async function load(event) {
+    const { locals, fetch, cookies, url } = event;
     const user = locals.authUser;
 
     if (!user || user.type !== 'customer') {
@@ -28,7 +29,7 @@ export async function load({ locals, fetch, cookies, url: requestUrl }) {
         data = {};
     }
 
-    const successMessage = requestUrl.searchParams.get('saved') === '1'
+    const successMessage = url.searchParams.get('saved') === '1'
         ? 'Your measurements have been saved.'
         : null;
 
@@ -40,7 +41,8 @@ export async function load({ locals, fetch, cookies, url: requestUrl }) {
 }
 
 export const actions = {
-    default: async ({ locals, request, fetch, cookies }) => {
+    default: async (event) => {
+        const { locals, request, fetch, cookies } = event;
         const user = locals.authUser;
         if (!user || user.type !== 'customer') {
             throw redirect(302, '/auth/login');
