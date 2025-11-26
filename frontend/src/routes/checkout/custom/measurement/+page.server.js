@@ -14,10 +14,10 @@ export async function load({ locals, fetch, cookies, url }) {
         throw redirect(302, '/auth/login?redirect=/checkout/custom/measurement');
     }
 
-    const url = `${SERVER_API_URL}/api/customers/me/measurements`;
+    const apiUrl = `${SERVER_API_URL}/api/customers/me/measurements`;
     const cookieHeader = buildCookieHeader(cookies);
 
-    const res = await fetch(url, {
+    const res = await fetch(apiUrl, {
         headers: cookieHeader ? { cookie: cookieHeader } : {}
     });
 
@@ -49,10 +49,10 @@ export const actions = {
         const form = await request.formData();
         const payload = Object.fromEntries(form);
 
-        const url = `${SERVER_API_URL}/api/customers/me/measurements`;
+        const apiUrl = `${SERVER_API_URL}/api/customers/me/measurements`;
         const cookieHeader = buildCookieHeader(cookies);
 
-        const res = await fetch(url, {
+        const res = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
