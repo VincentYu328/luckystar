@@ -2,17 +2,25 @@
 import { redirect } from '@sveltejs/kit';
 import { SERVER_API_URL } from '$env/static/private';
 
-export async function load({ locals, fetch }) {
-    // ⭐ 正确字段是 locals.user，不是 locals.authUser
-    const user = locals.user;
-    if (!user) {
+function buildCookieHeader(cookies) {
+    const pairs = cookies.getAll().map(({ name, value }) => `${name}=${value}`);
+    return pairs.length ? pairs.join('; ') : '';
+}
+
+export async function load(event) {
+    const { locals, fetch, cookies, url } = event;
+    const user = locals.authUser;
+
+    if (!user || user.type !== 'customer') {
         throw redirect(302, '/auth/login?redirect=/checkout/custom/measurement');
     }
 
-    const url = `${SERVER_API_URL}/api/customers/me/measurements`;
+    const apiUrl = `${SERVER_API_URL}/api/customers/me/measurements`;
+    const cookieHeader = buildCookieHeader(cookies);
 
-    // ⭐ SvelteKit 内置 fetch 自动带 cookie，无需 headers.cookie
-    const res = await fetch(url);
+    const res = await fetch(apiUrl, {
+        headers: cookieHeader ? { cookie: cookieHeader } : {}
+    });
 
     let data = {};
     try {
@@ -21,26 +29,36 @@ export async function load({ locals, fetch }) {
         data = {};
     }
 
+    const successMessage = url.searchParams.get('saved') === '1'
+        ? 'Your measurements have been saved.'
+        : null;
+
     return {
         user,
-        measurements: data.measurements || null
+        measurements: data.measurements || null,
+        successMessage
     };
 }
 
 export const actions = {
-    save: async ({ locals, request, fetch }) => {
-        const user = locals.user;
-        if (!user) throw redirect(302, '/auth/login');
+    default: async (event) => {
+        const { locals, request, fetch, cookies } = event;
+        const user = locals.authUser;
+        if (!user || user.type !== 'customer') {
+            throw redirect(302, '/auth/login');
+        }
 
         const form = await request.formData();
         const payload = Object.fromEntries(form);
 
-        const url = `${SERVER_API_URL}/api/customers/me/measurements`;
+        const apiUrl = `${SERVER_API_URL}/api/customers/me/measurements`;
+        const cookieHeader = buildCookieHeader(cookies);
 
-        const res = await fetch(url, {
-            method: 'POST',
+        const res = await fetch(apiUrl, {
+            method: 'PUT',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...(cookieHeader ? { cookie: cookieHeader } : {})
             },
             body: JSON.stringify(payload)
         });
@@ -50,6 +68,6 @@ export const actions = {
             throw redirect(303, '/checkout/custom/measurement?error=save_failed');
         }
 
-        throw redirect(303, '/my/measurements');
+        throw redirect(303, '/checkout/custom/measurement?saved=1');
     }
 };

@@ -15,8 +15,8 @@ export function requireCustomerAuth(req, res, next) {
     }
 
     try {
-        // 解码 access token
         const decoded = CustomerAuthService.verifyAccess(token);
+        console.log('[customerAuth] token payload:', decoded);
 
         // 检查客户是否仍存在
         const customer = CustomersDAO.getCustomerById(decoded.customerId);

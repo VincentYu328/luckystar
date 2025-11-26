@@ -17,6 +17,12 @@
     My Profile
   </h1>
 
+  {#if data.successMessage}
+    <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+      {data.successMessage}
+    </div>
+  {/if}
+
   <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
 
     <!-- Left Panel -->
@@ -57,8 +63,6 @@
 
         <button
           type="submit"
-          name="action"
-          value="save"
           class="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700"
         >
           Save Changes
