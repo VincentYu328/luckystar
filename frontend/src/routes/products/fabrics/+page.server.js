@@ -1,8 +1,7 @@
-import { API_BASE } from '$lib/server/api.js';
-
 export async function load({ fetch }) {
   try {
-    const res = await fetch(`${API_BASE}/products`);
+    // ❗ 使用相对路径，自动带 cookie，自动走 /api/products
+    const res = await fetch(`/api/products`);
 
     if (!res.ok) {
       console.error("Failed to load products:", res.status);

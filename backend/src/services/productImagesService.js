@@ -1,6 +1,7 @@
+// backend/src/services/productImagesService.js
 import ProductImagesDAO from '../data/product-images-dao.js';
 import ProductsDAO from '../data/products-dao.js';
-import auditService from './auditService.js';   // ← 你的项目规范，是 auditService 负责记录日志
+import UsersDAO from '../data/users-dao.js';  // ← 如果用 UsersDAO.logAction
 
 class ProductImagesService {
 
@@ -36,13 +37,23 @@ class ProductImagesService {
       is_primary: is_primary ?? 0
     });
 
-    // 3. 审计日志
-    auditService.log({
+    // 3. 审计日志（根据你的项目使用哪个）
+    // 方式 A: 如果用 auditService
+    // auditService.log({
+    //   userId: adminId,
+    //   action: 'product_image_added',
+    //   targetType: 'product',
+    //   targetId: product_id,
+    //   details: { url }
+    // });
+
+    // 方式 B: 如果用 UsersDAO.logAction（和你其他代码一致）
+    UsersDAO.logAction({
       userId: adminId,
       action: 'product_image_added',
       targetType: 'product',
       targetId: product_id,
-      details: { url }
+      details: JSON.stringify({ url })
     });
 
     return {
@@ -62,7 +73,8 @@ class ProductImagesService {
 
     ProductImagesDAO.delete(imageId);
 
-    auditService.log({
+    // 审计日志
+    UsersDAO.logAction({
       userId: adminId,
       action: 'product_image_deleted',
       targetType: 'product_image',
@@ -84,12 +96,13 @@ class ProductImagesService {
 
     ProductImagesDAO.setPrimary(imageId, img.product_id);
 
-    auditService.log({
+    // 审计日志
+    UsersDAO.logAction({
       userId: adminId,
       action: 'product_image_set_primary',
       targetType: 'product',
       targetId: img.product_id,
-      details: { imageId }
+      details: JSON.stringify({ imageId })
     });
 
     return { success: true };

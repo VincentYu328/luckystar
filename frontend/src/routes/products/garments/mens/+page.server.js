@@ -1,13 +1,10 @@
-import { API_BASE } from '$lib/server/api.js';
-
 export async function load({ fetch }) {
   try {
-    // 1. Fetch all categories
-    const catRes = await fetch(`${API_BASE}/products/categories`);
+    // 1. Fetch categories
+    const catRes = await fetch('/api/products/categories');
     const catData = catRes.ok ? await catRes.json() : { categories: [] };
     const categories = catData.categories ?? [];
 
-    // Locate the "mens" category
     const mensCat = categories.find(c => c.code === 'mens');
     if (!mensCat) {
       console.error("Mens category not found");
@@ -15,22 +12,22 @@ export async function load({ fetch }) {
     }
 
     // 2. Fetch all products
-    const prodRes = await fetch(`${API_BASE}/products`);
+    const prodRes = await fetch('/api/products');
     if (!prodRes.ok) {
-      return { products: [], categoryName: "Men" };
+      return { products: [], categoryName: mensCat.name };
     }
 
     const data = await prodRes.json();
     const all = data.products ?? [];
 
-    // 3. Filter men's garments
+    // 3. Filter
     const products = all.filter(
       p => p.product_type === 'garment' && p.category_id === mensCat.id
     );
 
     return {
       products,
-      categoryName: mensCat.name || "Men"
+      categoryName: mensCat.name
     };
 
   } catch (err) {

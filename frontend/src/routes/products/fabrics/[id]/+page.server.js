@@ -1,23 +1,21 @@
-import { API_BASE } from '$lib/server/api.js';
-
 export async function load({ fetch, params }) {
   const id = params.id;
 
   try {
-    // 1. 产品基本信息
-    const prodRes = await fetch(`${API_BASE}/products/${id}`);
+    // 1. 产品信息
+    const prodRes = await fetch(`/api/products/${id}`);
     if (!prodRes.ok) {
       return { status: prodRes.status, error: new Error("Product not found") };
     }
     const product = await prodRes.json();
 
     // 2. 产品图片
-    const imgRes = await fetch(`${API_BASE}/products/${id}/images`);
+    const imgRes = await fetch(`/api/products/${id}/images`);
     const imagesData = imgRes.ok ? await imgRes.json() : { images: [] };
     const images = imagesData.images ?? [];
 
     // 3. 布料库存（总列表 → filter）
-    const stockRes = await fetch(`${API_BASE}/products/fabric/stock`);
+    const stockRes = await fetch(`/api/products/fabric/stock`);
     let stock = null;
 
     if (stockRes.ok) {
@@ -37,3 +35,4 @@ export async function load({ fetch, params }) {
     return { product: null, images: [], stock: null };
   }
 }
+

@@ -1,9 +1,7 @@
-import { API_BASE } from '$lib/server/api.js';
-
 export async function load({ fetch }) {
   try {
-    // 1. 获取所有分类
-    const catRes = await fetch(`${API_BASE}/products/categories`);
+    // 1. 获取所有分类（正确路径）
+    const catRes = await fetch(`/api/products/categories`);
     const catData = catRes.ok ? await catRes.json() : { categories: [] };
     const categories = catData.categories ?? [];
 
@@ -15,7 +13,7 @@ export async function load({ fetch }) {
     }
 
     // 2. 获取所有产品
-    const prodRes = await fetch(`${API_BASE}/products`);
+    const prodRes = await fetch(`/api/products`);
     if (!prodRes.ok) {
       return { products: [], categoryName: "Boys" };
     }

@@ -38,13 +38,21 @@ app.use(
 );
 
 /* ===========================================
-   2. API Routes 集中入口
+   2. Static Files - 产品图片上传
+=========================================== */
+
+// ⭐ 提供 /uploads 静态文件访问（产品图片）
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+console.log('📁 Static files enabled: /uploads -> ' + path.join(process.cwd(), 'uploads'));
+
+/* ===========================================
+   3. API Routes 集中入口
 =========================================== */
 
 app.use('/api', apiRoutes);
 
 /* ===========================================
-   3. Static Files（可选：未来前端构建后配置）
+   4. Static Files（可选：未来前端构建后配置）
 =========================================== */
 
 // const frontendDistPath = path.join(__dirname, '../../frontend/dist');
@@ -55,13 +63,13 @@ app.use('/api', apiRoutes);
 // });
 
 /* ===========================================
-   4. Global Error Handler
+   5. Global Error Handler
 =========================================== */
 
 app.use(errorHandler);
 
 /* ===========================================
-   5. Export App（server.js 将启动它）
+   6. Export App（server.js 将启动它）
 =========================================== */
 
 export default app;

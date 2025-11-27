@@ -1,28 +1,48 @@
+// src/routes/admin/dashboard/+page.server.js
 import { redirect } from '@sveltejs/kit';
-import { apiGet } from '$lib/server/api.js';
+import { SERVER_API_URL } from '$env/static/private';
 
-export async function load({ locals }) {
-	const user = locals.authUser;
+function buildCookieHeader(cookies) {
+  return cookies
+    .getAll()
+    .map(({ name, value }) => `${name}=${value}`)
+    .join('; ');
+}
 
-	// 再保险：后台必须是员工
-	if (!user || user.type !== 'staff') {
-		throw redirect(302, '/auth/login?redirect=/admin/dashboard');
-	}
+export async function load({ locals, fetch, cookies }) {
+  const user = locals.authUser;
 
-	// ⭐ 从后端读取仪表板统计（你未来在后端写即可）
-	const stats = await apiGet('/admin/stats/dashboard');
+  // 未登录或不是员工 → 退回登录页（保持 redirect 逻辑一致）
+  if (!user || user.type !== 'staff') {
+    throw redirect(302, '/auth/login?redirect=/admin/dashboard');
+  }
 
-	// 若暂未实现 API，提供兜底
-	const safeStats = {
-		today_orders: stats?.today_orders ?? 0,
-		pending_orders: stats?.pending_orders ?? 0,
-		total_products: stats?.total_products ?? 0,
-		total_inventory_qty: stats?.total_inventory_qty ?? 0,
-		today_sales: stats?.today_sales ?? 0
-	};
+  const cookieHeader = buildCookieHeader(cookies);
 
-	return {
-		user,
-		stats: safeStats
-	};
+  let stats = null;
+  try {
+    const resp = await fetch(`${SERVER_API_URL}/api/admin/stats/dashboard`, {
+      headers: cookieHeader ? { cookie: cookieHeader } : {}
+    });
+    if (resp.ok) {
+      stats = await resp.json();
+    } else {
+      console.error('dashboard stats fetch failed:', await resp.text());
+    }
+  } catch (err) {
+    console.error('dashboard stats error:', err);
+  }
+
+  const safeStats = {
+    today_orders: stats?.today_orders ?? 0,
+    pending_orders: stats?.pending_orders ?? 0,
+    total_products: stats?.total_products ?? 0,
+    total_inventory_qty: stats?.total_inventory_qty ?? 0,
+    today_sales: stats?.today_sales ?? 0
+  };
+
+  return {
+    user,
+    stats: safeStats
+  };
 }

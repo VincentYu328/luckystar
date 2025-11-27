@@ -1,169 +1,152 @@
-// frontend/src/lib/stores/auth.js
+// src/lib/stores/auth.js
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 
-// ------------------------------------------------------
-// 全局登录状态（SSR 安全）
-// ------------------------------------------------------
+/* ============================================================
+   1. 全局状态
+   ============================================================ */
 
-/**
- * SSR → user = null，isLoggedIn = null（未知）
- * CSR → fetchCurrentUser() 后才变为 true / false
- */
-export const user = writable(null);
-export const isLoggedIn = writable(null);
+export const user = writable(null);           // 用户对象或 null
+export const isLoggedIn = writable(false);    // 永远 true / false，不再用 null
 export const userType = derived(user, ($u) => $u?.type ?? null);
 
 /**
- * 仅在浏览器端设置登录状态
+ * 设置全局用户状态（统一入口）
  */
 export function setUser(u) {
-	user.set(u);
-
-	if (browser) {
-		isLoggedIn.set(!!u);
-	}
+    user.set(u);
+    if (browser) {
+        isLoggedIn.set(!!u);
+    }
 }
 
-// ------------------------------------------------------
-// 安全 fetch（自动携带 Cookie）
-// ------------------------------------------------------
-
+/* ============================================================
+   2. 安全 fetch（自动携带 Cookie）
+   ============================================================ */
 async function safeFetch(url, options = {}) {
-	const res = await fetch(url, {
-		credentials: 'include',
-		headers: {
-			'Content-Type': 'application/json',
-			...(options.headers || {})
-		},
-		...options
-	});
+    const res = await fetch(url, {
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+        },
+        ...options
+    });
 
-	let data = null;
-	try {
-		data = await res.json();
-	} catch {
-		data = null;
-	}
+    let data = null;
+    try {
+        data = await res.json();
+    } catch (_) {}
 
-	return { res, data };
+    return { res, data };
 }
 
-// ------------------------------------------------------
-// 登录：支持 staff + customer
-// ------------------------------------------------------
+/* ============================================================
+   3. 登录（自动加载 profile）
+   ============================================================ */
 
 export async function login(email, password, options = {}) {
-	const type = options.type || 'staff';
+    const type = options.type || 'staff';
 
-	try {
-		const endpoint =
-			type === 'customer'
-				? '/api/customer-auth/login'
-				: '/api/auth/login';
+    try {
+        const endpoint =
+            type === 'customer'
+                ? '/api/customer-auth/login'
+                : '/api/auth/login';
 
-		const { res, data } = await safeFetch(endpoint, {
-			method: 'POST',
-			body: JSON.stringify({ email, password })
-		});
+        const { res, data } = await safeFetch(endpoint, {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        });
 
-		if (!res.ok) {
-			return {
-				success: false,
-				error: data?.error || 'Login failed'
-			};
-		}
+        if (!res.ok) {
+            return { success: false, error: data?.error || 'Login failed' };
+        }
 
-		// 登录成功后重新获取当前用户
-		await fetchCurrentUser();
+        // 登录成功 → 必须刷新用户信息
+        await fetchCurrentUser();
 
-		return { success: true };
-	} catch (err) {
-		return { success: false, error: err.message };
-	}
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
 }
 
-export function loginCustomer(email, password) {
-	return login(email, password, { type: 'customer' });
-}
+export const loginCustomer = (email, pw) =>
+    login(email, pw, { type: 'customer' });
 
-export function loginStaff(email, password) {
-	return login(email, password, { type: 'staff' });
-}
+export const loginStaff = (email, pw) =>
+    login(email, pw, { type: 'staff' });
 
-// ------------------------------------------------------
-// logout()：根据用户类型选择 API
-// ------------------------------------------------------
+/* ============================================================
+   4. Logout（自动清除状态 + 立即更新 Navbar）
+   ============================================================ */
 
 export async function logout() {
-	try {
-		let currentUser;
-		user.subscribe((u) => (currentUser = u))();
+    let current;
+    user.subscribe((v) => (current = v))(); // 一次性 snapshot
 
-		if (currentUser?.type === 'customer') {
-			await safeFetch('/api/customer-auth/logout', { method: 'POST' });
-		} else if (currentUser?.type === 'staff') {
-			await safeFetch('/api/auth/logout', { method: 'POST' });
-		} else {
-			// 不确定 → 两个都试（幂等）
-			await safeFetch('/api/customer-auth/logout', { method: 'POST' });
-			await safeFetch('/api/auth/logout', { method: 'POST' });
-		}
-	} catch (err) {
-		console.error('Logout failed:', err);
-	}
+    try {
+        if (current?.type === 'customer') {
+            await safeFetch('/api/customer-auth/logout', { method: 'POST' });
+        } else if (current?.type === 'staff') {
+            await safeFetch('/api/auth/logout', { method: 'POST' });
+        } else {
+            // fallback 幂等写法
+            await safeFetch('/api/customer-auth/logout', { method: 'POST' });
+            await safeFetch('/api/auth/logout', { method: 'POST' });
+        }
+    } catch (err) {
+        console.error('Logout failed:', err);
+    }
 
-	// 清除状态
-	user.set(null);
-	if (browser) {
-		isLoggedIn.set(false);
-	}
+    // ⭐⭐ 一次性清除，全局立即生效（UI 即时更新）
+    setUser(null);
 }
 
-// ------------------------------------------------------
-// fetchCurrentUser()：顾客优先 → 员工其次
-// ------------------------------------------------------
+/* ============================================================
+   5. 自动获取当前用户（customer > staff）
+   ============================================================ */
 
 export async function fetchCurrentUser() {
-	try {
-		// 尝试顾客
-		{
-			const { res, data } = await safeFetch('/api/customer-auth/me');
-			if (res.ok && data?.customer) {
-				setUser({
-					...data.customer,
-					type: 'customer'
-				});
-				return;
-			}
-		}
+    try {
+        // Customer 优先
+        {
+            const { res, data } = await safeFetch('/api/customer-auth/me');
+            if (res.ok && data?.customer) {
+                setUser({
+                    ...data.customer,
+                    type: 'customer'
+                });
+                return;
+            }
+        }
 
-		// 尝试员工
-		{
-			const { res, data } = await safeFetch('/api/auth/me');
-			if (res.ok && data?.user) {
-				setUser({
-					...data.user,
-					type: 'staff',
-					role: data.user.role || data.user.position || 'staff'
-				});
-				return;
-			}
-		}
+        // Staff 其次
+        {
+            const { res, data } = await safeFetch('/api/auth/me');
+            if (res.ok && data?.user) {
+                setUser({
+                    ...data.user,
+                    type: 'staff',
+                    role: data.user.role || data.user.position || 'staff'
+                });
+                return;
+            }
+        }
 
-		// 都失败 → 未登录
-		setUser(null);
-	} catch (err) {
-		console.error('fetchCurrentUser failed:', err);
-		setUser(null);
-	}
+        // 都没有
+        setUser(null);
+    } catch (err) {
+        console.error('fetchCurrentUser failed:', err);
+        setUser(null);
+    }
 }
 
-// ------------------------------------------------------
-// 浏览器端自动保持登录状态
-// SSR 不进行网络请求
-// ------------------------------------------------------
+/* ============================================================
+   6. 浏览器端自动初始化
+   ============================================================ */
 
 if (browser) {
-	fetchCurrentUser();
+    fetchCurrentUser();
 }

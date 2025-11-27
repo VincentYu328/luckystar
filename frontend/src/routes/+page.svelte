@@ -22,7 +22,7 @@
     <div class="hero-buttons">
       <a class="btn primary"   href="/products/fabrics">Browse Fabrics</a>
       <a class="btn secondary" href="/products/garments">Browse Garments</a>
-      <a class="btn tertiary"  href="/order">Start My Order</a>
+      <a class="btn tertiary"  href="/my/orders">Start My Order</a>
     </div>
 
   </div>
@@ -32,7 +32,7 @@
   :global(body, html) { margin:0; padding:0; height:100%; font-family: system-ui, sans-serif; }
 
   .hero {
-    min-height: 76vh;
+    min-height: 84vh;
     background: url('/images/frontpage.png') center/cover no-repeat fixed;
     display: flex;
     align-items: center;

@@ -1,102 +1,117 @@
 <script>
-    export let data;
-    let p = data.product;
-    let categories = data.categories;
+  export let data;
+  
+  $: product = data.product;
+  $: categories = data.categories;
+  $: values = data.values ?? {};
+  $: errorMessage = data.error;
+  $: successMessage = data.success;
+
+  const fieldValue = (field, fallback) => values[field] ?? fallback ?? '';
 </script>
 
 <div class="max-w-xl space-y-6">
+  <h1 class="text-2xl font-semibold">Edit Product</h1>
 
-    <h1 class="text-2xl font-semibold">
-        Edit Product（编辑产品）
-    </h1>
+  {#if successMessage}
+    <div class="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">
+      Product updated successfully!
+    </div>
+  {/if}
 
-    <form method="POST" class="space-y-4">
+  {#if errorMessage}
+    <div class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {errorMessage}
+    </div>
+  {/if}
 
-        <!-- Name -->
-        <div>
-            <label class="block text-sm font-medium">
-                Name（产品名称）
-            </label>
-            <input 
-                name="name" 
-                bind:value={p.name} 
-                class="border rounded p-2 w-full" 
-            />
-        </div>
+  <form method="POST" class="space-y-4">
+    <div>
+      <label>Name</label>
+      <input
+        name="name"
+        class="border rounded p-2 w-full"
+        value={fieldValue('name', product.name)}
+      />
+    </div>
 
-        <!-- SKU -->
-        <div>
-            <label class="block text-sm font-medium">
-                SKU（货号）
-            </label>
-            <input 
-                name="sku" 
-                bind:value={p.sku} 
-                class="border rounded p-2 w-full" 
-            />
-        </div>
+    <div>
+      <label>SKU</label>
+      <input
+        name="sku"
+        class="border rounded p-2 w-full"
+        value={fieldValue('sku', product.sku)}
+      />
+    </div>
 
-        <!-- Product Type -->
-        <div>
-            <label class="block text-sm font-medium">
-                Product Type（产品类型）
-            </label>
-            <select 
-                name="product_type" 
-                bind:value={p.product_type} 
-                class="border rounded p-2 w-full"
-            >
-                <option value="garment">Garment（成衣）</option>
-                <option value="fabric">Fabric（布料）</option>
-            </select>
-        </div>
-
-        <!-- Category -->
-        <div>
-            <label class="block text-sm font-medium">
-                Category（分类）
-            </label>
-            <select 
-                name="category_id" 
-                bind:value={p.category_id} 
-                class="border rounded p-2 w-full"
-            >
-                {#each categories as c}
-                    <option value={c.id}>{c.name}</option>
-                {/each}
-            </select>
-        </div>
-
-        <!-- Price -->
-        <div>
-            <label class="block text-sm font-medium">
-                Price (NZD)（价格）
-            </label>
-            <input 
-                name="price" 
-                type="number" 
-                bind:value={p.price} 
-                step="0.01" 
-                class="border rounded p-2 w-full" 
-            />
-        </div>
-
-        <button
-            type="submit"
-            name="action"
-            value="save"
-            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+    <div>
+      <label>Product Type</label>
+      <select
+        name="product_type"
+        class="border rounded p-2 w-full"
+      >
+        <option
+          value="garment"
+          selected={fieldValue('product_type', product.product_type) === 'garment'}
         >
-            Save Changes（保存修改）
-        </button>
+          Garment
+        </option>
 
-    </form>
+        <option
+          value="fabric"
+          selected={fieldValue('product_type', product.product_type) === 'fabric'}
+        >
+          Fabric
+        </option>
+      </select>
+    </div>
 
+    <div>
+      <label>Category</label>
+      <select
+        name="category_id"
+        class="border rounded p-2 w-full"
+      >
+        <option value="">-- Select --</option>
+
+        {#each categories as c}
+          <option
+            value={c.id}
+            selected={Number(fieldValue('category_id', product.category_id)) === c.id}
+          >
+            {c.name}
+          </option>
+        {/each}
+      </select>
+    </div>
+
+    <div>
+      <label>Price (NZD)</label>
+      <input
+        name="base_price"
+        type="number"
+        step="0.01"
+        class="border rounded p-2 w-full"
+        value={fieldValue('base_price', product.base_price)}
+      />
+    </div>
+
+    <div class="flex gap-4">
+      <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg">
+        Save Changes
+      </button>
+      <a href="/admin/products" class="bg-gray-200 px-6 py-3 rounded-lg">
+        Cancel
+      </a>
+    </div>
+  </form>
+
+  <div class="border-t pt-6">
     <a
-        href={`/admin/products/${p.id}/images`}
-        class="text-blue-600 underline"
+      href={`/admin/products/${product.id}/images`}
+      class="text-blue-600 underline"
     >
-        Manage Product Images（管理产品图片） →
+      Manage Product Images →
     </a>
-
+  </div>
 </div>

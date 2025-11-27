@@ -119,7 +119,7 @@ export const actions = {
 
     if (redirectTo) throw redirect(302, redirectTo);
     if (profile && userType === 'customer') throw redirect(302, '/my');
-    if (profile && userType === 'staff') throw redirect(302, '/admin');
+    if (profile && userType === 'staff') throw redirect(302, '/admin/dashboard');
 
     throw redirect(302, '/');
   }

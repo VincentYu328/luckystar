@@ -1,29 +1,23 @@
-import { API_BASE } from '$lib/server/api.js';
-
+// src/routes/products/garments/womens/+page.server.js
 export async function load({ fetch }) {
   try {
-    // 1. Fetch all categories
-    const catRes = await fetch(`${API_BASE}/products/categories`);
+    // 1. 取分类：直接走 /api
+    const catRes = await fetch('/api/products/categories');
     const catData = catRes.ok ? await catRes.json() : { categories: [] };
     const categories = catData.categories ?? [];
 
-    // Locate the "womens" category
     const womensCat = categories.find(c => c.code === 'womens');
     if (!womensCat) {
       console.error("Womens category not found");
       return { products: [], categoryName: "Women" };
     }
 
-    // 2. Fetch all products
-    const prodRes = await fetch(`${API_BASE}/products`);
-    if (!prodRes.ok) {
-      return { products: [], categoryName: womensCat.name || "Women" };
-    }
-
-    const data = await prodRes.json();
+    // 2. 取产品列表
+    const prodRes = await fetch('/api/products');
+    const data = prodRes.ok ? await prodRes.json() : { products: [] };
     const all = data.products ?? [];
 
-    // 3. Filter: garments under womens category
+    // 3. 过滤子分类
     const products = all.filter(
       p => p.product_type === 'garment' && p.category_id === womensCat.id
     );

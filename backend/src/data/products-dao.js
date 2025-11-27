@@ -72,13 +72,24 @@ class ProductsDAO {
     // 2. products（布料 + 成衣）
     // =====================================================
 
-    static getAllProducts() {
-        return db.prepare(`
-            SELECT *
-            FROM products
-            ORDER BY id DESC
-        `).all();
-    }
+static getAllProducts() {
+  return db.prepare(`
+    SELECT
+      p.id,
+      p.sku,
+      p.name,
+      p.product_type,
+      p.category_id,
+      p.base_price,
+      p.is_active,
+      p.created_at,
+      p.updated_at,
+      c.name AS category_name
+    FROM products p
+    LEFT JOIN product_categories c ON c.id = p.category_id
+    ORDER BY p.id DESC
+  `).all();
+}
 
     static getProductById(id) {
         return db.prepare(`

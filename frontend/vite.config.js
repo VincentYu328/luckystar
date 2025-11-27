@@ -10,10 +10,17 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000', // Change this to your backend port
+        target: 'http://localhost:3000', // Your backend port
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path
+      },
+
+      // ⭐⭐ NEW: Add proxy for uploaded images
+      '/uploads': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false
       }
     }
   },

@@ -21,9 +21,9 @@ router.post('/login', async (req, res) => {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? 'none' : 'lax',
-      maxAge: 15 * 60 * 1000
+      maxAge: 15 * 60 * 1000,
+      path: '/'            // ⭐⭐ 关键补充，全站有效
     };
-
     res.cookie('access_token', tokens.accessToken, cookieSettings);
     res.cookie('refresh_token', tokens.refreshToken, { ...cookieSettings, maxAge: 7 * 86400 * 1000 });
 
@@ -50,7 +50,8 @@ router.post('/refresh', (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
-      maxAge: 15 * 60 * 1000
+      maxAge: 15 * 60 * 1000,
+      path: '/'
     });
 
     return res.json({ success: true });
@@ -74,11 +75,11 @@ router.post('/logout', (req, res) => {
         targetType: 'user',
         targetId: decoded.userId
       });
-    } catch (_) {}
+    } catch (_) { }
   }
 
-  res.clearCookie('access_token');
-  res.clearCookie('refresh_token');
+  res.clearCookie('access_token', { path: '/' });
+  res.clearCookie('refresh_token', { path: '/' });
   return res.json({ success: true });
 });
 

@@ -14,6 +14,7 @@ import measurementRoutes from './measurementRoutes.js';
 import retailOrderRoutes from './retailOrderRoutes.js';
 import paymentRoutes from './paymentRoutes.js';
 import auditRoutes from './auditRoutes.js';
+import adminRoutes from './adminRoutes.js';
 
 const router = express.Router();
 
@@ -45,5 +46,6 @@ router.use('/measurements', measurementRoutes);
 router.use('/retail-orders', retailOrderRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/audits', auditRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;

@@ -284,10 +284,10 @@ INSERT INTO product_categories (code, name, parent_id, sort_order) VALUES
 ('garment','Garments',NULL,2);
 
 INSERT INTO product_categories (code, name, parent_id, sort_order) VALUES
-('mens','Men',(SELECT id FROM product_categories WHERE code='garment'),3),
-('womens','Women',(SELECT id FROM product_categories WHERE code='garment'),4),
-('boys','Boys',(SELECT id FROM product_categories WHERE code='garment'),5),
-('girls','Girls',(SELECT id FROM product_categories WHERE code='garment'),6);
+('mens','Men (男装)',(SELECT id FROM product_categories WHERE code='garment'),3),
+('womens','Women (女装)',(SELECT id FROM product_categories WHERE code='garment'),4),
+('boys','Boys (男童)',(SELECT id FROM product_categories WHERE code='garment'),5),
+('girls','Girls (女童)',(SELECT id FROM product_categories WHERE code='garment'),6);
 
 ----------------------------------------------------------------------
 -- 12. Products（核心表）

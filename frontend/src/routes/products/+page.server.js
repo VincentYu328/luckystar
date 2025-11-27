@@ -1,8 +1,6 @@
-import { API_BASE } from '$lib/server/api.js';
-
 export async function load({ fetch }) {
   try {
-    const res = await fetch(`${API_BASE}/api/products/categories`);
+    const res = await fetch('/api/products/categories');
 
     if (!res.ok) {
       console.error("Failed to fetch product categories:", res.status);
