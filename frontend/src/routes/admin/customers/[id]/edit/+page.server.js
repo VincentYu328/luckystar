@@ -1,48 +1,72 @@
 // frontend/src/routes/admin/customers/[id]/edit/+page.server.js
 import { api } from '$lib/server/api.js';
-import { error, redirect } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 
-export async function load({ locals, params }) {
-    const user = locals.authUser;
+export async function load({ params, locals, fetch, cookies }) {
+  const user = locals.authUser;
+  if (!user || user.type !== 'staff') {
+    throw error(403, 'Forbidden');
+  }
 
-    if (!user || user.type !== 'staff') {
-        throw error(403, 'Forbidden');
-    }
+  const id = Number(params.id);
+  if (isNaN(id)) {
+    throw error(400, 'Invalid customer id');
+  }
 
-    const id = params.id;
+  // ⭐ FIXED: 正确传参方式
+  const customerRes = await api.customers.get(id, { fetch, cookies });
+  const customer = customerRes.customer ?? customerRes;
 
-    const customer = await api.customers.get(id);
+  if (!customer) throw error(404, 'Customer not found');
 
-    if (!customer || customer.error) {
-        throw error(404, 'Customer not found');
-    }
-
-    return { customer };
+  return {
+    customer,
+    error: null,
+    success: false,
+    values: null
+  };
 }
 
 export const actions = {
-    save: async ({ locals, params, request }) => {
-        const user = locals.authUser;
-
-        if (!user || user.type !== 'staff') {
-            throw error(403, 'Forbidden');
-        }
-
-        const id = params.id;
-        const form = await request.formData();
-
-        const payload = {
-            full_name: form.get('full_name'),
-            phone: form.get('phone'),
-            email: form.get('email'),
-            address: form.get('address'),
-            wechat: form.get('wechat'),
-            whatsapp: form.get('whatsapp'),
-            is_active: form.get('is_active') === '1'
-        };
-
-        await api.customers.update(id, payload);
-
-        throw redirect(303, `/admin/customers/${id}`);
+  default: async ({ params, request, locals, fetch, cookies }) => {
+    const user = locals.authUser;
+    if (!user || user.type !== 'staff') {
+      throw error(403, 'Forbidden');
     }
+
+    const id = Number(params.id);
+    const form = await request.formData();
+    const payload = Object.fromEntries(form);
+
+    const cleanPayload = {
+      full_name: payload.full_name,
+      phone: payload.phone,
+      email: payload.email,
+      address: payload.address || null,
+      wechat: payload.wechat || null,
+      whatsapp: payload.whatsapp || null,
+      is_active: payload.is_active === '1'
+    };
+
+    try {
+      // ⭐ FIXED: update 也要改正确
+      const res = await api.customers.update(id, cleanPayload, { fetch, cookies });
+
+      if (res.error) {
+        return { success: false, error: res.error, values: payload };
+      }
+
+      const updated = await api.customers.get(id, { fetch, cookies });
+
+      return {
+        success: true,
+        error: null,
+        values: cleanPayload,
+        customer: updated.customer ?? updated
+      };
+
+    } catch (err) {
+      return { success: false, error: err.message, values: payload };
+    }
+  }
 };

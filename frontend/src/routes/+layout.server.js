@@ -1,22 +1,38 @@
-import { verifyToken } from '$lib/server/auth.js';
+// frontend/src/routes/+layout.server.js
 
-/**
- * 全局 SSR 用户加载器
- * - 若存在 Token，则解析用户信息
- * - 若不存在 Token，则 user = null（前台正常浏览）
- * - 所有页面都可以通过 data.user 获取登录状态
- */
+import jwt from 'jsonwebtoken';
+
 export async function load({ cookies }) {
-  const token = cookies.get('token');
+  const access = cookies.get('access_token');      // ⭐ 正确的名字
   let user = null;
 
-  if (token) {
+  if (access) {
     try {
-      user = await verifyToken(token);
+      const decoded = jwt.decode(access);
+
+      // staff
+      if (decoded?.userId) {
+        user = {
+          id: decoded.userId,
+          type: 'staff',
+          role: decoded.role || 'staff',
+          full_name: decoded.full_name,
+          email: decoded.email
+        };
+      }
+
+      // customer
+      if (decoded?.customerId) {
+        user = {
+          id: decoded.customerId,
+          type: 'customer',
+          full_name: decoded.full_name,
+          email: decoded.email
+        };
+      }
+
     } catch (err) {
-      // Token 无效或过期 → 清除 Cookie（可选）
-      cookies.delete('token', { path: '/' });
-      user = null;
+      cookies.delete('access_token', { path: '/' });
     }
   }
 

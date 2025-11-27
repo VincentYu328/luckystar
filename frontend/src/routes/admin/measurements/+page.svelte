@@ -1,3 +1,5 @@
+<!-- frontend\src\routes\admin\measurements\+page.svelte -->
+
 <script>
     export let data;
     const measurements = data.measurements;

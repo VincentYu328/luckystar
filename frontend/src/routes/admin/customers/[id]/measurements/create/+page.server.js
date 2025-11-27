@@ -1,59 +1,70 @@
-// frontend/src/routes/admin/measurements/create/+page.server.js
+// frontend/src/routes/admin/customers/[id]/measurements/create/+page.server.js
+// 终极稳定版：创建成功后不跳转，直接返回成功信息，前端自动处理
+
 import { api } from '$lib/server/api.js';
-import { error, redirect } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 
-export function load({ locals, url }) {
-    const user = locals.authUser;
+export const load = ({ locals, params }) => {
+  const user = locals.authUser;
+  if (!user || user.type !== 'staff') {
+    throw error(403, 'Forbidden');
+  }
 
-    if (!user || user.type !== 'staff') {
-        throw error(403, 'Forbidden');
-    }
+  const customer_id = Number(params.id);
+  if (!customer_id || isNaN(customer_id)) {
+    throw error(400, '无效的客户ID');
+  }
 
-    const customer_id = url.searchParams.get('customer_id');
-
-    if (!customer_id) {
-        throw error(400, 'customer_id is required');
-    }
-
-    return {
-        customer_id
-    };
-}
+  return { customer_id };
+};
 
 export const actions = {
-    create: async ({ locals, request }) => {
-        const user = locals.authUser;
-
-        if (!user || user.type !== 'staff') {
-            throw error(403, 'Forbidden');
-        }
-
-        const form = await request.formData();
-
-        const payload = {
-            customer_id: form.get('customer_id'),
-            gender: form.get('gender'),
-            height: form.get('height'),
-            weight: form.get('weight'),
-            chest: form.get('chest'),
-            waist: form.get('waist'),
-            hips: form.get('hips'),
-            shoulder: form.get('shoulder'),
-            sleeve: form.get('sleeve'),
-            inseam: form.get('inseam'),
-            outseam: form.get('outseam'),
-            thigh: form.get('thigh'),
-            calf: form.get('calf'),
-            neckline: form.get('neckline'),
-            notes: form.get('notes')
-        };
-
-        const res = await api.measurements.create(payload);
-
-        if (!res || res.error) {
-            return { error: res?.error || 'Failed to create measurement' };
-        }
-
-        throw redirect(303, `/admin/measurements/${res.id}`);
+  default: async ({ locals, params, request }) => {
+    const user = locals.authUser;
+    if (!user || user.type !== 'staff') {
+      throw error(403, 'Forbidden');
     }
+
+    const customer_id = Number(params.id);
+    const form = await request.formData();
+
+    // 转换 formData → 干净对象
+    const payload = {};
+    for (const [key, value] of form.entries()) {
+      payload[key] = value === '' ? null : value.trim();
+    }
+
+    console.log('Measurement create payload:', payload);
+
+    try {
+      const res = await api.measurements.createForCustomer(customer_id, payload);
+
+      console.log('Measurement created:', res);
+
+      const measurementId = res.id ?? res.measurement?.id ?? res.data?.id;
+
+      if (!measurementId) {
+        console.warn('创建成功但未返回ID:', res);
+      }
+
+      // 关键修改：不 throw redirect！
+      // 直接返回成功，前端决定怎么处理（toast + 自动刷新列表）
+      return {
+        success: true,
+        message: '量体记录创建成功！',
+        measurementId,
+        // 可选：把新数据返回，前端直接追加到列表，不用重新请求
+        newMeasurement: res.measurement ?? res
+      };
+
+    } catch (err) {
+      console.error('创建量体记录失败:', err);
+
+      return {
+        success: false,
+        error: err.message || '创建失败，请重试',
+        values: payload  // 保留表单数据
+      };
+    }
+  }
 };

@@ -4,116 +4,82 @@ import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
 import MeasurementService from '../services/measurementService.js';
+import MeasurementsDAO from '../data/measurements-dao.js';
 
 const router = express.Router();
 
 /**
- * ======================================================
- * Measurements for Customers
- * ======================================================
+ * ==========================================================
+ * GET /api/measurements
+ * 获取所有量体记录（Admin Measurement Dashboard）
+ * ==========================================================
  */
-
-// GET /api/customers/:id/measurements
 router.get(
-  '/customers/:id/measurements',
+  '/',
   requireAuth,
   requirePermission('customers.view'),
   (req, res) => {
-    const customerId = Number(req.params.id);
-    const list = MeasurementService.getMeasurementsByCustomer(customerId);
-    res.json({ count: list.length, measurements: list });
-  }
-);
-
-// POST /api/customers/:id/measurements
-router.post(
-  '/customers/:id/measurements',
-  requireAuth,
-  requirePermission('customers.update'),
-  (req, res) => {
     try {
-      const result = MeasurementService.createMeasurement(req.user.id, {
-        ...req.body,
-        customer_id: Number(req.params.id),
-        group_member_id: null
-      });
-      res.json(result);
+      console.log("📘 [API] GET /api/measurements - fetch all");
+
+      // 方案 A：统一入口 → 始终用 Service.getAll()
+      const items =
+        MeasurementService.getAll?.() ??
+        MeasurementsDAO.getAll?.() ??
+        [];
+
+      console.log("📗 [API] measurement count:", items.length);
+
+      res.json({ items });
     } catch (err) {
-      res.status(400).json({ error: err.message });
+      console.error("❌ [API] GET /api/measurements failed:", err);
+      res.status(500).json({ error: err.message });
     }
   }
 );
 
 /**
- * ======================================================
- * Measurements for Group Members
- * ======================================================
+ * ==========================================================
+ * GET /api/measurements/:id
+ * 获取单条量体
+ * ==========================================================
  */
-
-// GET /api/group-members/:id/measurements
 router.get(
-  '/group-members/:id/measurements',
-  requireAuth,
-  requirePermission('customers.view'),
-  (req, res) => {
-    const memberId = Number(req.params.id);
-    const list = MeasurementService.getMeasurementsByGroupMember(memberId);
-    res.json({ count: list.length, measurements: list });
-  }
-);
-
-// POST /api/group-members/:id/measurements
-router.post(
-  '/group-members/:id/measurements',
-  requireAuth,
-  requirePermission('customers.update'),
-  (req, res) => {
-    try {
-      const result = MeasurementService.createMeasurement(req.user.id, {
-        ...req.body,
-        customer_id: null,
-        group_member_id: Number(req.params.id)
-      });
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
-  }
-);
-
-/**
- * ======================================================
- * Single Measurement Operations
- * ======================================================
- */
-
-// GET /api/measurements/:id
-router.get(
-  '/measurements/:id',
+  '/:id',
   requireAuth,
   requirePermission('customers.view'),
   (req, res) => {
     try {
-      const m = MeasurementService.getMeasurementById(Number(req.params.id));
-      res.json(m);
+      const id = Number(req.params.id);
+      const measurement = MeasurementService.getMeasurementById(id);
+      res.json({ measurement });
     } catch (err) {
       res.status(404).json({ error: err.message });
     }
   }
 );
 
-// PUT /api/measurements/:id
+/**
+ * ==========================================================
+ * PUT /api/measurements/:id
+ * 更新量体
+ * ==========================================================
+ */
 router.put(
-  '/measurements/:id',
+  '/:id',
   requireAuth,
   requirePermission('customers.update'),
   (req, res) => {
     try {
+      const adminId = req.user.id;
+      const id = Number(req.params.id);
+
       const result = MeasurementService.updateMeasurement(
-        req.user.id,
-        Number(req.params.id),
+        adminId,
+        id,
         req.body
       );
+
       res.json(result);
     } catch (err) {
       res.status(400).json({ error: err.message });
@@ -121,17 +87,26 @@ router.put(
   }
 );
 
-// DELETE /api/measurements/:id
+/**
+ * ==========================================================
+ * DELETE /api/measurements/:id
+ * 删除量体记录
+ * ==========================================================
+ */
 router.delete(
-  '/measurements/:id',
+  '/:id',
   requireAuth,
   requirePermission('customers.update'),
   (req, res) => {
     try {
+      const adminId = req.user.id;
+      const id = Number(req.params.id);
+
       const result = MeasurementService.deleteMeasurement(
-        req.user.id,
-        Number(req.params.id)
+        adminId,
+        id
       );
+
       res.json(result);
     } catch (err) {
       res.status(400).json({ error: err.message });

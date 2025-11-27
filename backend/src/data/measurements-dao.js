@@ -8,6 +8,15 @@ class MeasurementsDAO {
   // =====================================================
 
   // 获取某客户的全部量体记录
+
+  static getAll() {
+    return db.prepare(`
+    SELECT *
+    FROM measurements
+    ORDER BY measured_at DESC
+  `).all();
+  }
+
   static getByCustomer(customerId) {
     return db.prepare(`
       SELECT *

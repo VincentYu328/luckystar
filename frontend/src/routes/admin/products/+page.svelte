@@ -1,3 +1,5 @@
+<!-- frontend\src\routes\admin\products\+page.svelte -->
+
 <script>
   export let data;
   const products = data.products;

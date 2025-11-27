@@ -1,9 +1,11 @@
+<!-- frontend\src\routes\admin\customers\[id]\+page.svelte -->
+
 <script>
     export let data;
 
     const customer = data.customer;
     const groupOrders = data.groupOrders;
-    const measurements = data.measurements;   // ← 必须加
+    const measurements = data.measurements;
 </script>
 
 <div class="space-y-10 max-w-3xl">
@@ -49,7 +51,6 @@
         </a>
     </section>
 
-
     <!-- ========================= -->
     <!-- 团体订单 -->
     <!-- ========================= -->
@@ -91,10 +92,8 @@
                     </tbody>
                 </table>
             </div>
-        {/else}
         {/if}
     </section>
-
 
     <!-- ========================= -->
     <!-- 量体记录 -->
@@ -130,7 +129,7 @@
                         {#each measurements as m}
                         <tr class="border-b hover:bg-gray-50">
                             <td class="p-3">{new Date(m.created_at).toLocaleDateString()}</td>
-                            <td class="p-3">{m.gender}</td>
+                            <td class="p-3">{m.gender ?? '—'}</td>
                             <td class="p-3">{m.height}</td>
                             <td class="p-3">{m.waist}</td>
                             <td class="p-3 text-right">
@@ -146,7 +145,6 @@
                     </tbody>
                 </table>
             </div>
-        {/else}
         {/if}
     </section>
 

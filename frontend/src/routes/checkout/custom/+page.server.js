@@ -1,38 +1,26 @@
 // src/routes/checkout/custom/+page.server.js
 import { redirect } from '@sveltejs/kit';
-import { SERVER_API_URL } from '$env/static/private';
+import { api } from '$lib/server/api.js';
 
-export async function load({ locals, cookies }) {
+export async function load({ locals, fetch, cookies }) {
     const user = locals.authUser;
 
-    if (!user) {
+    if (!user || user.type !== 'customer') {
         throw redirect(302, '/auth/login?redirect=/checkout/custom');
     }
 
-    // ⭐ 从环境变量读取后端 API 地址
-    const apiUrl = `${SERVER_API_URL}/api/customers/me/measurements`;
-
-    // ⭐ 必须带上 cookies 才能 SSR 认证成功
-    const res = await fetch(apiUrl, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-            'Accept': 'application/json',
-            cookie: cookies.get('session')
-                ? `session=${cookies.get('session')}`
-                : ''
-        }
-    });
-
-    let data = {};
+    // ⭐ 使用封装好的 API，不拼 URL，不拼 Cookie
+    let measurements;
     try {
-        data = await res.json();
+        const res = await api.my.measurements({ fetch, cookies });
+        measurements = res.measurements || null;
     } catch {
-        data = { measurements: null };
+        measurements = null;
     }
 
     return {
         user,
-        hasMeasurements: !!data.measurements
+        hasMeasurements: !!measurements
     };
 }
+

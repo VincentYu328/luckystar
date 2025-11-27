@@ -6,26 +6,27 @@ import UsersDAO from '../data/users-dao.js';
 class MeasurementService {
 
   // =====================================================
+  // 新增: 获取全部量体记录（方案 A 的关键一步）
+  // =====================================================
+  static getAll() {
+    return MeasurementsDAO.getAll();
+  }
+
+  // =====================================================
   // 底层查询（内部使用）
   // =====================================================
-
-  // 获取某客户的全部量体记录
   static getByCustomer(customerId) {
     const customer = CustomersDAO.getCustomerById(customerId);
     if (!customer) throw new Error('Customer not found');
-
     return MeasurementsDAO.getByCustomer(customerId);
   }
 
-  // 获取某团体成员的全部量体记录
   static getByGroupMember(memberId) {
     const member = CustomersDAO.getGroupMemberById(memberId);
     if (!member) throw new Error('Group member not found');
-
     return MeasurementsDAO.getByGroupMember(memberId);
   }
 
-  // 根据 id 查询单条记录
   static getById(id) {
     const m = MeasurementsDAO.getById(id);
     if (!m) throw new Error('Measurement not found');
@@ -35,7 +36,6 @@ class MeasurementService {
   // =====================================================
   // 创建量体记录（必须二选一）
   // =====================================================
-
   static createMeasurement(adminId, payload) {
     const { customer_id, group_member_id } = payload;
 
@@ -76,9 +76,8 @@ class MeasurementService {
   }
 
   // =====================================================
-  // 更新量体记录
+  // 更新
   // =====================================================
-
   static updateMeasurement(adminId, id, fields) {
     const existing = MeasurementsDAO.getById(id);
     if (!existing) throw new Error('Measurement not found');
@@ -97,9 +96,8 @@ class MeasurementService {
   }
 
   // =====================================================
-  // 删除量体记录
+  // 删除
   // =====================================================
-
   static deleteMeasurement(adminId, id) {
     const existing = MeasurementsDAO.getById(id);
     if (!existing) throw new Error('Measurement not found');
@@ -118,20 +116,16 @@ class MeasurementService {
   }
 
   // =====================================================
-  // 对路由暴露的友好方法名（方案 A）
+  // 对路由暴露的友好方法名
   // =====================================================
-
-  // /customers/:id/measurements 用
   static getMeasurementsByCustomer(customerId) {
     return this.getByCustomer(customerId);
   }
 
-  // /group-members/:id/measurements 用
   static getMeasurementsByGroupMember(memberId) {
     return this.getByGroupMember(memberId);
   }
 
-  // /measurements/:id 用
   static getMeasurementById(id) {
     return this.getById(id);
   }

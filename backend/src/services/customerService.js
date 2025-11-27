@@ -2,12 +2,13 @@
 import CustomersDAO from '../data/customers-dao.js';
 import UsersDAO from '../data/users-dao.js';
 import MeasurementsDAO from '../data/measurements-dao.js';
+import MeasurementService from './measurementService.js';
 import bcrypt from 'bcrypt';
 
 class CustomerService {
 
     // =====================================================
-    // Customers (后台)
+    // Customers（后台）
     // =====================================================
 
     static getAllCustomers() {
@@ -93,7 +94,7 @@ class CustomerService {
 
 
     // =====================================================
-    // Group Orders (后台)
+    // Group Orders（后台）
     // =====================================================
 
     static getGroupOrdersByCustomer(customerId) {
@@ -107,139 +108,47 @@ class CustomerService {
     }
 
     static createGroupOrder(adminId, payload) {
-        const required = [
-            'leader_id',
-            'leader_name',
-            'leader_phone',
-            'leader_email',
-            'group_name',
-            'fabric_selected'
-        ];
-
-        for (const r of required) {
-            if (!payload[r]) throw new Error(`Missing required field: ${r}`);
-        }
-
-        const result = CustomersDAO.createGroupOrder(payload);
-
-        UsersDAO.logAction({
-            userId: adminId,
-            action: 'group_order_created',
-            targetType: 'group_order',
-            targetId: result.lastInsertRowid,
-            details: payload
-        });
-
-        return { success: true, id: result.lastInsertRowid };
+        return CustomersDAO.createGroupOrder(payload);
     }
 
     static updateGroupOrder(adminId, orderId, fields) {
-        const existing = CustomersDAO.getGroupOrderById(orderId);
-        if (!existing) throw new Error('Group order not found');
-
         CustomersDAO.updateGroupOrder(orderId, fields);
-
-        UsersDAO.logAction({
-            userId: adminId,
-            action: 'group_order_updated',
-            targetType: 'group_order',
-            targetId: orderId,
-            details: fields
-        });
-
         return { success: true };
     }
 
     static deleteGroupOrder(adminId, orderId) {
         CustomersDAO.deleteGroupOrder(orderId);
-
-        UsersDAO.logAction({
-            userId: adminId,
-            action: 'group_order_deleted',
-            targetType: 'group_order',
-            targetId: orderId,
-            details: null
-        });
-
         return { success: true };
     }
 
 
     // =====================================================
-    // Group Members (后台)
+    // Group Members
     // =====================================================
 
     static getGroupMembers(orderId) {
         return CustomersDAO.getGroupMembers(orderId);
     }
 
-    static getGroupMemberById(id) {
-        const member = CustomersDAO.getGroupMemberById(id);
-        if (!member) throw new Error('Group member not found');
-        return member;
-    }
-
     static createGroupMember(adminId, payload) {
-        const required = ['group_order_id', 'full_name', 'phone'];
-        for (const r of required) {
-            if (!payload[r]) throw new Error(`Missing required field: ${r}`);
-        }
-
-        const result = CustomersDAO.createGroupMember(payload);
-
-        UsersDAO.logAction({
-            userId: adminId,
-            action: 'group_member_created',
-            targetType: 'group_member',
-            targetId: result.lastInsertRowid,
-            details: payload
-        });
-
-        return { success: true, id: result.lastInsertRowid };
-    }
-
-    static updateGroupMember(adminId, id, fields) {
-        const existing = CustomersDAO.getGroupMemberById(id);
-        if (!existing) throw new Error('Group member not found');
-
-        CustomersDAO.updateGroupMember(id, fields);
-
-        UsersDAO.logAction({
-            userId: adminId,
-            action: 'group_member_updated',
-            targetType: 'group_member',
-            targetId: id,
-            details: fields
-        });
-
-        return { success: true };
-    }
-
-    static deleteGroupMember(adminId, id) {
-        CustomersDAO.deleteGroupMember(id);
-
-        UsersDAO.logAction({
-            userId: adminId,
-            action: 'group_member_deleted',
-            targetType: 'group_member',
-            targetId: id,
-            details: null
-        });
-
-        return { success: true };
+        return CustomersDAO.createGroupMember(payload);
     }
 
 
     // =====================================================
-    // Measurements (后台)
+    // Measurements（后台）
     // =====================================================
 
     static getMeasurementsForCustomer(id) {
         return MeasurementsDAO.getByCustomer(id);
     }
 
-    static getMeasurementsForGroupMember(id) {
-        return MeasurementsDAO.getByGroupMember(id);
+    static createMeasurementForCustomer(adminId, customerId, fields) {
+        return MeasurementService.createMeasurement(adminId, {
+            ...fields,
+            customer_id: customerId,
+            group_member_id: null
+        });
     }
 
 
@@ -272,16 +181,13 @@ class CustomerService {
         return CustomersDAO.updateMyMeasurements(customerId, fields);
     }
 
+
     // =====================================================
     // ⭐⭐⭐ 顾客端：My Orders ⭐⭐⭐
     // =====================================================
 
     static getMyOrders(customerId) {
         return CustomersDAO.getMyRetailOrders(customerId);
-    }
-
-    static getMyOrderItems(orderId) {
-        return CustomersDAO.getRetailOrderItems(orderId);
     }
 }
 

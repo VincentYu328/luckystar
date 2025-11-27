@@ -1,3 +1,5 @@
+// frontend\src\routes\products\+page.server.js
+
 export async function load({ fetch }) {
   try {
     const res = await fetch('/api/products/categories');

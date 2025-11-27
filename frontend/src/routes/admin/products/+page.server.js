@@ -1,3 +1,5 @@
+// frontend\src\routes\admin\products\+page.server.js
+
 import { redirect, error } from '@sveltejs/kit';
 import { api } from '$lib/server/api.js';
 

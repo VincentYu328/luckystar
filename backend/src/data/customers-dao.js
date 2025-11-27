@@ -296,15 +296,6 @@ class CustomersDAO {
   // group_orders 表
   // =====================================================
 
-  static getGroupOrdersByCustomer(customerId) {
-    return db.prepare(`
-      SELECT *
-      FROM group_orders
-      WHERE leader_id = ?
-      ORDER BY id DESC
-    `).all(customerId);
-  }
-
   static getGroupOrderById(orderId) {
     return db.prepare(`
       SELECT *
@@ -387,6 +378,20 @@ class CustomersDAO {
     `).get(id);
   }
 
+  static getGroupOrdersByCustomer(customerId) {
+    return db.prepare(`
+    SELECT 
+      go.*,
+      c.full_name as leader_name,
+      c.phone as leader_phone,
+      c.email as leader_email
+    FROM group_orders go
+    LEFT JOIN customers c ON go.leader_id = c.id
+    WHERE go.leader_id = ?
+    ORDER BY go.created_at DESC
+  `).all(customerId);
+  }
+  
   static createGroupMember(data) {
     const stmt = db.prepare(`
       INSERT INTO group_members (

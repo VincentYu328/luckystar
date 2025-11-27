@@ -1,6 +1,15 @@
 <script>
+  import { onMount } from 'svelte';
   import { page } from '$app/stores';
+  import { cart, cartTotal } from '$lib/stores/cart.js';
+
   const orderId = $page.url.searchParams.get('order');
+
+  // ⭐ 成功页加载时自动清空购物车
+  onMount(() => {
+    cart.set([]);
+    cartTotal.set(0);
+  });
 </script>
 
 <div class="max-w-3xl mx-auto py-20 text-center space-y-6">
@@ -11,6 +20,11 @@
 
   <p class="text-gray-700">
     Your order request has been received. We will contact you soon.
+  </p>
+
+  <!-- ⭐ 新增提示语（你需要的） -->
+  <p class="text-yellow-700 text-sm italic">
+    All orders must be reviewed by our staff before they come into effect.
   </p>
 
   {#if orderId}

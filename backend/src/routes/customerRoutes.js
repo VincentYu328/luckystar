@@ -1,3 +1,5 @@
+// backend\src\routes\customerRoutes.js
+
 import express from 'express';
 import CustomerService from '../services/customerService.js';
 import RetailOrderService from '../services/retailOrderService.js';
@@ -85,6 +87,29 @@ router.get('/me/orders', requireCustomerAuth, (req, res) => {
   res.json({ orders });
 });
 
+// POST /api/customers/me/orders
+router.post('/me/orders', requireCustomerAuth, (req, res) => {
+  try {
+    const customerId = req.customer.id;
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'items required' });
+    }
+
+    const result = RetailOrderService.createOrder(customerId, {
+      items,
+      status: 'pending',
+      source: 'web'
+    });
+
+    res.json(result);
+
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 
 /* ======================================================
    Customers（后台 staff + customer 自身访问）
@@ -104,7 +129,7 @@ router.get(
 // GET /api/customers/:id
 router.get('/:id', requireAuth, (req, res) => {
   if (req.user.role !== 'customer') {
-    requirePermission('customers.view')(req, res, () => {});
+    requirePermission('customers.view')(req, res, () => { });
     if (res.headersSent) return;
   }
 
@@ -114,7 +139,7 @@ router.get('/:id', requireAuth, (req, res) => {
 
   try {
     const customer = CustomerService.getCustomerById(Number(req.params.id));
-    res.json(customer);
+    res.json({ customer });
   } catch (err) {
     res.status(404).json({ error: err.message });
   }
@@ -138,7 +163,7 @@ router.post(
 // PUT /api/customers/:id
 router.put('/:id', requireAuth, (req, res) => {
   if (req.user.role !== 'customer') {
-    requirePermission('customers.update')(req, res, () => {});
+    requirePermission('customers.update')(req, res, () => { });
     if (res.headersSent) return;
   }
 
@@ -161,7 +186,7 @@ router.put('/:id', requireAuth, (req, res) => {
 // DELETE /api/customers/:id
 router.delete('/:id', requireAuth, (req, res) => {
   if (req.user.role !== 'customer') {
-    requirePermission('customers.update')(req, res, () => {});
+    requirePermission('customers.update')(req, res, () => { });
     if (res.headersSent) return;
   }
 
@@ -186,7 +211,7 @@ router.delete('/:id', requireAuth, (req, res) => {
 
 router.get('/:id/group-orders', requireAuth, (req, res) => {
   if (req.user.role !== 'customer') {
-    requirePermission('customers.view')(req, res, () => {});
+    requirePermission('customers.view')(req, res, () => { });
     if (res.headersSent) return;
   }
 
@@ -329,6 +354,39 @@ router.delete(
       const result = CustomerService.deleteGroupMember(
         req.user.id,
         Number(req.params.id)
+      );
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
+/* ======================================================
+   Customer Measurements (后台 staff 管理客户量体记录)
+====================================================== */
+
+router.get(
+  '/:id/measurements',
+  requireAuth,
+  requirePermission('customers.view'),
+  (req, res) => {
+    const customerId = Number(req.params.id);
+    const list = CustomerService.getMeasurementsForCustomer(customerId);
+    res.json({ count: list.length, measurements: list });
+  }
+);
+
+router.post(
+  '/:id/measurements',
+  requireAuth,
+  requirePermission('customers.update'),
+  (req, res) => {
+    try {
+      const result = CustomerService.createMeasurementForCustomer(
+        req.user.id,
+        Number(req.params.id),
+        req.body
       );
       res.json(result);
     } catch (err) {

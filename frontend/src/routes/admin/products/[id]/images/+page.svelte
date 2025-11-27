@@ -1,3 +1,5 @@
+<!-- frontend\src\routes\admin\products\[id]\images\+page.svelte -->
+
 <script>
     import { enhance } from "$app/forms";
     export let data;

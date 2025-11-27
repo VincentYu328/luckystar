@@ -1,3 +1,5 @@
+<!-- frontend\src\routes\products\+page.svelte -->
+
 <script>
   export let data;
   const categories = data.categories ?? [];

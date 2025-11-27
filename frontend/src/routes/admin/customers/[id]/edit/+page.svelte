@@ -1,125 +1,118 @@
+<!-- frontend/src/routes/admin/customers/[id]/edit/+page.svelte -->
 <script>
-    export let data;
-    let c = data.customer;
+  export let data;
+  export let form;  // ⭐ 接收 action 返回的数据
 
-    let full_name = c.full_name;
-    let phone = c.phone;
-    let email = c.email;
-    let address = c.address;
-    let wechat = c.wechat;
-    let whatsapp = c.whatsapp;
-    let is_active = c.is_active ? "1" : "0";
+  $: customer = form?.customer ?? data.customer;
+  $: values = form?.values ?? {};
+  $: errorMessage = form?.error ?? null;
+  $: successMessage = form?.success ?? false;
+
+  const fieldValue = (field, fallback) => values[field] ?? fallback ?? '';
 </script>
 
-<div class="max-w-xl space-y-8">
+<div class="max-w-xl space-y-6">
+  <h1 class="text-2xl font-semibold">Edit Customer（编辑客户）</h1>
 
-    <h1 class="text-3xl font-semibold tracking-tight">
-        Edit Customer（编辑客户）
-    </h1>
+  {#if successMessage}
+    <div class="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">
+      Customer updated successfully!（客户信息已更新）
+    </div>
+  {/if}
 
-    <form method="POST" class="space-y-6">
+  {#if errorMessage}
+    <div class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {errorMessage}
+    </div>
+  {/if}
 
-        <!-- Full Name -->
-        <div>
-            <label class="block text-sm font-medium">
-                Full Name（姓名）
-            </label>
-            <input
-                name="full_name"
-                bind:value={full_name}
-                required
-                class="border rounded p-2 w-full"
-            />
-        </div>
+  <form method="POST" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Full Name（姓名）</label>
+      <input
+        name="full_name"
+        class="border rounded p-2 w-full"
+        value={fieldValue('full_name', customer.full_name)}
+        required
+      />
+    </div>
 
-        <!-- Phone -->
-        <div>
-            <label class="block text-sm font-medium">
-                Phone（电话）
-            </label>
-            <input
-                name="phone"
-                bind:value={phone}
-                required
-                class="border rounded p-2 w-full"
-            />
-        </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Phone（电话）</label>
+      <input
+        name="phone"
+        class="border rounded p-2 w-full"
+        value={fieldValue('phone', customer.phone)}
+        required
+      />
+    </div>
 
-        <!-- Email -->
-        <div>
-            <label class="block text-sm font-medium">
-                Email（邮箱）
-            </label>
-            <input
-                name="email"
-                type="email"
-                bind:value={email}
-                required
-                class="border rounded p-2 w-full"
-            />
-        </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Email（邮箱）</label>
+      <input
+        name="email"
+        type="email"
+        class="border rounded p-2 w-full"
+        value={fieldValue('email', customer.email)}
+        required
+      />
+    </div>
 
-        <!-- Address -->
-        <div>
-            <label class="block text-sm font-medium">
-                Address（地址）
-            </label>
-            <input
-                name="address"
-                bind:value={address}
-                class="border rounded p-2 w-full"
-            />
-        </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Address（地址）</label>
+      <input
+        name="address"
+        class="border rounded p-2 w-full"
+        value={fieldValue('address', customer.address)}
+      />
+    </div>
 
-        <!-- WeChat -->
-        <div>
-            <label class="block text-sm font-medium">
-                WeChat（微信）
-            </label>
-            <input
-                name="wechat"
-                bind:value={wechat}
-                class="border rounded p-2 w-full"
-            />
-        </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">WeChat（微信）</label>
+      <input
+        name="wechat"
+        class="border rounded p-2 w-full"
+        value={fieldValue('wechat', customer.wechat)}
+      />
+    </div>
 
-        <!-- WhatsApp -->
-        <div>
-            <label class="block text-sm font-medium">
-                WhatsApp
-            </label>
-            <input
-                name="whatsapp"
-                bind:value={whatsapp}
-                class="border rounded p-2 w-full"
-            />
-        </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">WhatsApp</label>
+      <input
+        name="whatsapp"
+        class="border rounded p-2 w-full"
+        value={fieldValue('whatsapp', customer.whatsapp)}
+      />
+    </div>
 
-        <!-- Account Status -->
-        <div>
-            <label class="block text-sm font-medium">
-                Account Status（账号状态）
-            </label>
-
-            <select
-                name="is_active"
-                bind:value={is_active}
-                class="border rounded p-2 w-full"
-            >
-                <option value="1">Active（启用）</option>
-                <option value="0">Inactive（停用）</option>
-            </select>
-        </div>
-
-        <button
-            type="submit"
-            name="action"
-            value="save"
-            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+    <div>
+      <label class="block text-sm font-medium mb-1">Account Status（账号状态）</label>
+      <select
+        name="is_active"
+        class="border rounded p-2 w-full"
+      >
+        <option
+          value="1"
+          selected={fieldValue('is_active', customer.is_active ? '1' : '0') === '1'}
         >
-            Save Changes（保存修改）
-        </button>
+          Active（启用）
+        </option>
+        <option
+          value="0"
+          selected={fieldValue('is_active', customer.is_active ? '1' : '0') === '0'}
+        >
+          Inactive（停用）
+        </option>
+      </select>
+    </div>
 
-    </form>
-
+    <div class="flex gap-4">
+      <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+        Save Changes（保存修改）
+      </button>
+      <a href={`/admin/customers/${customer.id}`} class="bg-gray-200 px-6 py-3 rounded-lg inline-block text-center">
+        Cancel（取消）
+      </a>
+    </div>
+  </form>
 </div>

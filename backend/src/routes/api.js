@@ -37,12 +37,15 @@ router.use('/auth', authRoutes);
  * 业务模块
  * ============================================================
  */
-router.use('/users', userRoutes);
 router.use('/customers', customerRoutes);
 router.use('/products', productRoutes);
-router.use('/product-images', productImagesRoutes); 
+router.use('/product-images', productImagesRoutes);
 router.use('/sizecharts', sizechartRoutes);
+
+// ⭐ MeasurementRoutes 唯一挂载点
 router.use('/measurements', measurementRoutes);
+
+// 其余保持不动
 router.use('/retail-orders', retailOrderRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/audits', auditRoutes);
