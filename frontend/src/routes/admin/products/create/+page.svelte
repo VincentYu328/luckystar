@@ -1,8 +1,6 @@
-<!-- frontend\src\routes\admin\products\create\+page.svelte -->
-
 <script>
   export let data;
-  const categories = data.categories;
+  const categories = Array.isArray(data.categories) ? data.categories : [];
   const values = data.values || {};
   const errorMessage = data.error;
 </script>
@@ -17,7 +15,6 @@
   {/if}
 
   <form method="POST" class="space-y-4">
-    <!-- Name -->
     <div>
       <label class="block text-sm font-medium" for="name">
         Name（产品名称）
@@ -31,7 +28,6 @@
       />
     </div>
 
-    <!-- SKU -->
     <div>
       <label class="block text-sm font-medium" for="sku">
         SKU（货号）
@@ -44,7 +40,6 @@
       />
     </div>
 
-    <!-- Product Type -->
     <div>
       <label class="block text-sm font-medium" for="product_type">
         Product Type（产品类型）
@@ -60,7 +55,6 @@
       </select>
     </div>
 
-    <!-- Category -->
     <div>
       <label class="block text-sm font-medium" for="category_id">
         Category（分类）
@@ -71,13 +65,13 @@
         class="border rounded p-2 w-full"
         value={values.category_id ?? ''}
       >
+        <option value="">Select a category (Optional)</option>
         {#each categories as c}
           <option value={c.id}>{c.name}</option>
         {/each}
       </select>
     </div>
 
-    <!-- Price -->
     <div>
       <label class="block text-sm font-medium" for="base_price">
         Price (NZD)（价格）

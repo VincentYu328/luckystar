@@ -7,7 +7,7 @@ class ProductsDAO {
     // 1. product_categories（分类）
     // =====================================================
 
-    static getAllCategories() {
+    static async getAllCategories() { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM product_categories
@@ -15,7 +15,7 @@ class ProductsDAO {
         `).all();
     }
 
-    static getCategoryById(id) {
+    static async getCategoryById(id) { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM product_categories
@@ -23,7 +23,7 @@ class ProductsDAO {
         `).get(id);
     }
 
-    static getCategoryByCode(code) {
+    static async getCategoryByCode(code) { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM product_categories
@@ -31,7 +31,7 @@ class ProductsDAO {
         `).get(code);
     }
 
-    static createCategory(data) {
+    static async createCategory(data) { // ✅ Added async
         return db.prepare(`
             INSERT INTO product_categories (
                 code, name, parent_id, sort_order, is_active
@@ -45,10 +45,11 @@ class ProductsDAO {
         );
     }
 
-    static updateCategory(id, fields) {
+    static async updateCategory(id, fields) { // ✅ Added async
         const allowed = ['code', 'name', 'parent_id', 'sort_order', 'is_active'];
         const keys = Object.keys(fields).filter(k => allowed.includes(k));
-        if (!keys.length) return;
+        // 确保即使没有可更新的字段也返回一个 run() 类似的结果对象，以便 Service 层可以检查 .changes
+        if (!keys.length) return { changes: 0, lastInsertRowid: 0 }; 
 
         const clause = keys.map(k => `${k} = ?`).join(', ');
         const params = keys.map(k => fields[k]);
@@ -61,7 +62,7 @@ class ProductsDAO {
         `).run(...params);
     }
 
-    static deleteCategory(id) {
+    static async deleteCategory(id) { // ✅ Added async
         return db.prepare(`
             DELETE FROM product_categories WHERE id = ?
         `).run(id);
@@ -72,26 +73,26 @@ class ProductsDAO {
     // 2. products（布料 + 成衣）
     // =====================================================
 
-static getAllProducts() {
-  return db.prepare(`
-    SELECT
-      p.id,
-      p.sku,
-      p.name,
-      p.product_type,
-      p.category_id,
-      p.base_price,
-      p.is_active,
-      p.created_at,
-      p.updated_at,
-      c.name AS category_name
-    FROM products p
-    LEFT JOIN product_categories c ON c.id = p.category_id
-    ORDER BY p.id DESC
-  `).all();
-}
+    static async getAllProducts() { // ✅ Added async
+        return db.prepare(`
+            SELECT
+              p.id,
+              p.sku,
+              p.name,
+              p.product_type,
+              p.category_id,
+              p.base_price,
+              p.is_active,
+              p.created_at,
+              p.updated_at,
+              c.name AS category_name
+            FROM products p
+            LEFT JOIN product_categories c ON c.id = p.category_id
+            ORDER BY p.id DESC
+        `).all();
+    }
 
-    static getProductById(id) {
+    static async getProductById(id) { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM products
@@ -99,7 +100,7 @@ static getAllProducts() {
         `).get(id);
     }
 
-    static getProductBySKU(sku) {
+    static async getProductBySKU(sku) { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM products
@@ -107,7 +108,7 @@ static getAllProducts() {
         `).get(sku);
     }
 
-    static searchProducts(keyword) {
+    static async searchProducts(keyword) { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM products
@@ -120,7 +121,7 @@ static getAllProducts() {
         );
     }
 
-    static createProduct(data) {
+    static async createProduct(data) { // ✅ Added async
         return db.prepare(`
             INSERT INTO products (
                 sku, name, description, category_id, product_type,
@@ -150,7 +151,7 @@ static getAllProducts() {
         );
     }
 
-    static updateProduct(id, fields) {
+    static async updateProduct(id, fields) { // ✅ Added async
         const allowed = [
             'sku', 'name', 'description', 'category_id', 'product_type',
             'material', 'pattern', 'width_cm', 'fabric_id',
@@ -159,7 +160,8 @@ static getAllProducts() {
         ];
 
         const keys = Object.keys(fields).filter(k => allowed.includes(k));
-        if (!keys.length) return;
+        // 确保即使没有可更新的字段也返回一个 run() 类似的结果对象
+        if (!keys.length) return { changes: 0, lastInsertRowid: 0 }; 
 
         const clause = keys.map(k => `${k} = ?`).join(', ');
         const params = keys.map(k => fields[k]);
@@ -173,7 +175,7 @@ static getAllProducts() {
         `).run(...params);
     }
 
-    static deleteProduct(id) {
+    static async deleteProduct(id) { // ✅ Added async
         return db.prepare(`
             DELETE FROM products WHERE id = ?
         `).run(id);
@@ -184,7 +186,7 @@ static getAllProducts() {
     // 3. product_images（产品图片）
     // =====================================================
 
-    static getImagesByProduct(productId) {
+    static async getImagesByProduct(productId) { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM product_images
@@ -193,7 +195,7 @@ static getAllProducts() {
         `).all(productId);
     }
 
-    static addImage(data) {
+    static async addImage(data) { // ✅ Added async
         return db.prepare(`
             INSERT INTO product_images (
                 product_id, url, sort_order, is_primary
@@ -206,10 +208,10 @@ static getAllProducts() {
         );
     }
 
-    static updateImage(id, fields) {
+    static async updateImage(id, fields) { // ✅ Added async
         const allowed = ['url', 'sort_order', 'is_primary'];
         const keys = Object.keys(fields).filter(k => allowed.includes(k));
-        if (!keys.length) return;
+        if (!keys.length) return { changes: 0, lastInsertRowid: 0 }; // Consistent return
 
         const clause = keys.map(k => `${k} = ?`).join(', ');
         const params = keys.map(k => fields[k]);
@@ -222,7 +224,7 @@ static getAllProducts() {
         `).run(...params);
     }
 
-    static deleteImage(id) {
+    static async deleteImage(id) { // ✅ Added async
         return db.prepare(`
             DELETE FROM product_images WHERE id = ?
         `).run(id);
@@ -233,7 +235,7 @@ static getAllProducts() {
     // 4. 布料库存：v_fabric_stock（自动统计）
     // =====================================================
 
-    static getFabricStock(fabricId) {
+    static async getFabricStock(fabricId) { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM v_fabric_stock
@@ -241,7 +243,7 @@ static getAllProducts() {
         `).get(fabricId);
     }
 
-    static getAllFabricStock() {
+    static async getAllFabricStock() { // ✅ Added async
         return db.prepare(`
             SELECT *
             FROM v_fabric_stock
@@ -254,7 +256,7 @@ static getAllProducts() {
     // 5. 布料进货（人工录入）
     // =====================================================
 
-    static recordFabricIncoming(data) {
+    static async recordFabricIncoming(data) { // ✅ Added async
         return db.prepare(`
             INSERT INTO fabric_incoming (
                 fabric_id, quantity, unit_price,
@@ -278,7 +280,7 @@ static getAllProducts() {
     // 6. 布料使用（人工录入）
     // =====================================================
 
-    static recordFabricUsage(data) {
+    static async recordFabricUsage(data) { // ✅ Added async
         return db.prepare(`
             INSERT INTO garment_fabric_usage (
                 fabric_id, garment_id,
