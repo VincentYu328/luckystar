@@ -1,17 +1,29 @@
+// frontend/src/routes/admin/payments/+page.server.js
+import { redirect } from '@sveltejs/kit';
 import { api } from '$lib/server/api.js';
-import { error } from '@sveltejs/kit';
 
-export async function load({ locals }) {
+export async function load({ locals, url }) {
     const user = locals.authUser;
 
     if (!user || user.type !== 'staff') {
-        throw error(403, 'Forbidden');
+        throw redirect(302, '/auth/login?redirect=/admin/payments');
     }
 
-    // 获取所有付款记录
-    const payments = await api.payments.list();
+    try {
+        // 🔥 修复：获取付款记录
+        const res = await api.payments.list();
+        
+        console.log("[LOAD /admin/payments] fetched payments:", res.payments ? res.payments.length : 0);
 
-    return {
-        payments: payments.payments ?? []
-    };
+        return {
+            payments: res.payments ?? []
+        };
+
+    } catch (err) {
+        console.error("[LOAD /admin/payments] Error:", err);
+        
+        return {
+            payments: []
+        };
+    }
 }

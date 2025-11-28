@@ -1,42 +1,43 @@
-import { redirect, error } from '@sveltejs/kit';
+// frontend/src/routes/admin/users/+page.server.js
+import { redirect } from '@sveltejs/kit';
+import { api } from '$lib/server/api.js';
 
-/**
- * 后台管理区访问控制
- * 适用范围：/admin/*
- *
- * locals.authUser 结构示例：
- * {
- *   id,
- *   full_name,
- *   email,
- *   role,   // 'admin' | 'manager' | 'sales'
- *   type    // 'staff' | 'customer'
- * }
- */
+export async function load({ locals, url }) {
+    const user = locals.authUser;
 
-export function load({ locals, url }) {
-	const user = locals.authUser;
+    // 基本权限检查：必须是 staff
+    if (!user || user.type !== 'staff') {
+        throw redirect(302, '/auth/login?redirect=/admin/users');
+    }
 
-	// 1) 未登录 → 跳转到登录页
-	if (!user) {
-		const redirectTo = encodeURIComponent(url.pathname + url.search);
-		throw redirect(302, `/auth/login?redirect=${redirectTo}`);
-	}
+    // 🔥 使用 role 字段检查（现在应该有值了）
+    if (user.role !== 'admin') {
+        console.log(`[LOAD /admin/users] Access denied: ${user.full_name} (role: ${user.role}) is not admin`);
+        throw redirect(302, '/admin?error=forbidden');
+    }
 
-	// 2) 顾客（前台用户）无权进入后台
-	if (user.type !== 'staff') {
-		const redirectTo = encodeURIComponent(url.pathname + url.search);
-		throw redirect(302, `/auth/login?redirect=${redirectTo}`);
-	}
+    try {
+        const result = await api.users.list();
+        
+        console.log("[LOAD /admin/users] fetched users:", result?.users ? result.users.length : 0);
 
-	// 3) 后台最基础 RBAC：仅 staff 角色
-	const allowedRoles = ['admin', 'manager', 'sales'];
-	if (user.role && !allowedRoles.includes(user.role)) {
-		throw error(403, 'Permission denied: insufficient role privileges.');
-	}
+        return { 
+            users: result?.users ?? [],
+            createSuccess: url.searchParams.get('createSuccess') === 'true',
+            updateSuccess: url.searchParams.get('updateSuccess') === 'true',
+            deleteSuccess: url.searchParams.get('deleteSuccess') === 'true',
+            deleteError: url.searchParams.get('deleteError') || null
+        };
 
-	// 4) 放行后台
-	return {
-		user
-	};
+    } catch (err) {
+        console.error("[LOAD /admin/users] Error:", err);
+        
+        return { 
+            users: [],
+            createSuccess: false,
+            updateSuccess: false,
+            deleteSuccess: false,
+            deleteError: err.message || 'Failed to load users'
+        };
+    }
 }

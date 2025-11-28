@@ -38,6 +38,7 @@ router.use('/auth', authRoutes);
  * 业务模块
  * ============================================================
  */
+router.use('/users', userRoutes);
 router.use('/customers', customerRoutes);
 router.use('/products', productRoutes);
 router.use('/product-images', productImagesRoutes);

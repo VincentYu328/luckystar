@@ -32,7 +32,9 @@ export async function handle({ event, resolve }) {
         event.locals.authUser = {
           id: decoded.userId,
           type: 'staff',
-          role_name: decoded.role || 'staff',
+          // 🔥 修复：确保 role 和 role_name 都有值
+          role: decoded.role || 'staff',                    // 添加这行
+          role_name: decoded.role_name || decoded.role || 'staff',  // 修改这行
           full_name: decoded.full_name,
           email: decoded.email
         };

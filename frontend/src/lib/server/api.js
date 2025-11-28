@@ -203,10 +203,12 @@ export const api = {
 
     // ---------------- PAYMENTS ----------------
     payments: {
+        list() { return request('GET', '/payments'); }, // 🔥 添加这一行
         get(id) { return request('GET', `/payments/id/${id}`); },
         byOrder(type, id) { return request('GET', `/payments/${type}/${id}`); },
         create(data) { return request('POST', '/payments', data); },
         verify(id) { return request('POST', `/payments/${id}/verify`); },
+        delete(id) { return request('DELETE', `/payments/${id}`); }, // 🔥 可选
     },
 
     // ---------------- SIZECHARTS ----------------
