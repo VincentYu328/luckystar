@@ -1,13 +1,12 @@
 // src/lib/server/api.js
 // ===============================
 //  LuckyStar 全站通用 API 封装（2025）
-//  统一处理：
-//  • 自动注入 fetch（由 hooks.server.js 提供）
-//  • 查询参数自动拼接（queryParams 对象 → ?k=v）
-//  • 自动带 Cookie（credentials: "include"）
-//  • 统一的 JSON 解析 + 错误处理
-//  • 特殊状态码 303/307/redirected 直接返回响应（用于创建后跳转）
 // ===============================
+
+import { PUBLIC_API_URL } from '$env/static/public';
+
+// 拼接完整的后端 API 地址
+const BASE_URL = `${PUBLIC_API_URL}/api`;
 
 let globalFetch = null;
 
@@ -21,21 +20,13 @@ export function initApi(fetchImpl) {
 
 /**
  * 通用请求函数（内部核心）
- *
- * @param {'GET'|'POST'|'PUT'|'DELETE'|'PATCH'} method
- * @param {string} path
- * @param {object|null} [data=null]
- * @param {Record<string, string>} [extraHeaders={}]
- * @param {Record<string, string|number|boolean>} [queryParams={}]
- *
- * @returns {Promise<any>}
  */
 async function request(method, path, data = null, extraHeaders = {}, queryParams = {}) {
     if (!globalFetch) {
         throw new Error('API not initialized: 请在 hooks.server.js 中调用 initApi(event.fetch)');
     }
 
-    // 1. 拼接查询参数（自动处理 undefined / null / 布尔值）
+    // 1. 拼接查询参数
     let fullPath = path;
     if (Object.keys(queryParams).length > 0) {
         const params = new URLSearchParams();
@@ -55,14 +46,16 @@ async function request(method, path, data = null, extraHeaders = {}, queryParams
     };
 
     // 3. 发起请求
-    const res = await globalFetch(`/api${fullPath}`, {
+    const url = `${BASE_URL}${fullPath}`;
+
+    const res = await globalFetch(url, {
         method,
         credentials: 'include', // 自动携带登录态 cookie
         headers,
         body: data && method !== 'GET' ? JSON.stringify(data) : undefined,
     });
 
-    // 4. 特殊重定向直接返回（用于创建测量后跳转等场景）
+    // 4. 特殊重定向直接返回（用于创建后跳转等场景）
     if (res.status === 303 || res.status === 307 || res.redirected) {
         return res;
     }
@@ -156,12 +149,13 @@ export const api = {
         logout() { return request('POST', '/auth/logout'); },
     },
 
-    // ---------------- MY ----------------
+    // ---------------- MY（客户自己）----------------
     my: {
-        profile() { return request('GET', '/my/profile'); },
-        orders() { return request('GET', '/my/orders'); },
-        order(id) { return request('GET', `/my/orders/${id}`); },
-        measurements() { return request('GET', '/my/measurements'); },
+        profile() { return request('GET', '/customers/me/profile'); },
+        orders() { return request('GET', '/customers/me/orders'); },
+        order(id) { return request('GET', `/customers/me/orders/${id}`); },
+        measurements() { return request('GET', '/customers/me/measurements'); },
+        saveMeasurements(data) { return request('PUT', '/customers/me/measurements', data); },
     },
 
     // ---------------- CUSTOMERS ----------------
@@ -203,12 +197,12 @@ export const api = {
 
     // ---------------- PAYMENTS ----------------
     payments: {
-        list() { return request('GET', '/payments'); }, // 🔥 添加这一行
-        get(id) { return request('GET', `/payments/id/${id}`); },
+        list() { return request('GET', '/payments'); },
+        get(id) { return request('GET', `/payments/id/${id}`); }, // 注意这里是 /id/ 而不是直接 ${id}
         byOrder(type, id) { return request('GET', `/payments/${type}/${id}`); },
         create(data) { return request('POST', '/payments', data); },
         verify(id) { return request('POST', `/payments/${id}/verify`); },
-        delete(id) { return request('DELETE', `/payments/${id}`); }, // 🔥 可选
+        delete(id) { return request('DELETE', `/payments/${id}`); },
     },
 
     // ---------------- SIZECHARTS ----------------
