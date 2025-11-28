@@ -67,26 +67,61 @@ export const api = {
 
     // ---------------- PRODUCTS ----------------
     products: {
-        list() { return request("GET", "/products"); },
-        get(id) { return request("GET", `/products/${id}`); },
-        listCategories() { return request("GET", "/products/categories"); },
-        images(id) { return request("GET", `/products/${id}/images`); },
-        stock(id) { return request("GET", `/products/${id}/stock`); },
-        create(data) { return request("POST", "/products", data); },
-        update(id, data) { return request("PUT", `/products/${id}`, data); },
-        delete(id) { return request("DELETE", `/products/${id}`); },
-        addImage(id, data) { return request("POST", `/products/${id}/images`, data); },
-        updateImage(imgId, data) { return request("PUT", `/products/images/${imgId}`, data); },
-        deleteImage(imgId) { return request("DELETE", `/products/images/${imgId}`); }
+        list() {
+            return request("GET", "/products");  // 获取产品列表
+        },
+        get(id) {
+            return request("GET", `/products/${id}`);  // 获取单个产品详情
+        },
+        listCategories() {
+            return request("GET", "/products/categories");  // 获取产品分类
+        },
+        images(id) {
+            return request("GET", `/products/${id}/images`);  // 获取产品图片
+        },
+        stock(id) {
+            return request("GET", `/products/${id}/stock`);  // 获取产品库存
+        },
+        create(data) {
+            return request("POST", "/products", data);  // 创建新产品
+        },
+        update(id, data) {
+            return request("PUT", `/products/${id}`, data);  // 更新产品信息
+        },
+        delete(id) {
+            return request("DELETE", `/products/${id}`);  // 删除单个产品
+        },
+        addImage(id, data) {
+            return request("POST", `/products/${id}/images`, data);  // 为产品添加图片
+        },
+        updateImage(imgId, data) {
+            return request("PUT", `/products/images/${imgId}`, data);  // 更新产品图片
+        },
+        deleteImage(imgId) {
+            return request("DELETE", `/products/images/${imgId}`);  // 删除产品图片
+        }
     },
 
     // ---------------- INVENTORY ----------------
     inventory: {
-        fabricList() { return request("GET", "/inventory/fabric"); },
-        fabricIn(data) { return request("POST", "/inventory/in", data); },
-        fabricOut(data) { return request("POST", "/inventory/out", data); },
-        adjust(data) { return request("POST", "/inventory/adjust", data); },
-        transactions() { return request("GET", "/inventory/transactions"); }
+        fabricList() {
+            return request("GET", "/inventory/fabric");
+        },
+        garmentList() {
+            return request("GET", "/inventory/garments");
+        },
+        transactions() {
+            return request("GET", "/inventory/transactions");
+        },
+        fabricIn(data) {
+            return request("POST", "/inventory/in", data);
+        },
+        fabricOut(data) {
+            return request("POST", "/inventory/out", data);
+        },
+        adjust(data) {
+            return request("POST", "/inventory/adjust", data);
+        }
     },
 
     // ---------------- RETAIL ORDERS ----------------
@@ -147,66 +182,27 @@ export const api = {
 
     // ---------------- MEASUREMENTS ----------------
     measurements: {
-        // ================================
-        // Admin — 全部量体记录列表（方案 A）
-        // GET /api/measurements
-        // ================================
         list() {
             return request("GET", "/measurements");
         },
-
-        // ================================
-        // Admin — 获取单条 Measurement
-        // GET /api/measurements/:id
-        // ================================
         get(id) {
             return request("GET", `/measurements/${id}`);
         },
-
-        // ================================
-        // Customer — 某客户的量体记录
-        // GET /api/customers/:id/measurements
-        // ================================
         byCustomer(id) {
             return request("GET", `/customers/${id}/measurements`);
         },
-
-        // ================================
-        // Group Member — 某团体成员量体记录
-        // GET /api/group-members/:id/measurements
-        // ================================
         byGroupMember(id) {
             return request("GET", `/group-members/${id}/measurements`);
         },
-
-        // ================================
-        // 创建 Measurement：属于某客户
-        // POST /api/customers/:id/measurements
-        // ================================
         createForCustomer(id, data) {
             return request("POST", `/customers/${id}/measurements`, data);
         },
-
-        // ================================
-        // 创建 Measurement：属于某团体成员
-        // POST /api/group-members/:id/measurements
-        // ================================
         createForGroupMember(id, data) {
             return request("POST", `/group-members/${id}/measurements`, data);
         },
-
-        // ================================
-        // Admin — 更新 measurement
-        // PUT /api/measurements/:id
-        // ================================
         update(id, data) {
             return request("PUT", `/measurements/${id}`, data);
         },
-
-        // ================================
-        // Admin — 删除 measurement
-        // DELETE /api/measurements/:id
-        // ================================
         delete(id) {
             return request("DELETE", `/measurements/${id}`);
         }
@@ -266,3 +262,4 @@ api.delete = (path) => request("DELETE", path);
 
 // Debug:
 console.log("[api] Loaded successfully");
+

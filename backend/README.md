@@ -272,6 +272,7 @@ backend/
 │   │   ├── measurementService.js      # 量体记录
 │   │   ├── sizechartService.js        # 尺码表
 │   │   └── auditService.js            # 审计日志写入
+│   │   └── adminService.js            # 新增加的ADMIN
 │   │
 │   └── routes/
 │       ├── api.js                     # API 总路由（聚合所有子路由）
@@ -286,6 +287,8 @@ backend/
 │       ├── measurementRoutes.js       # 量体上传（后台）
 │       ├── sizechartRoutes.js         # 尺码表
 │       └── auditRoutes.js             # 查看审计日志
+│       └── adminRoutes.js             # 新增ADMIN
+│       └── inventoryRoutes.js         # 新增INVENTORY
 │
 ├── uploads/                           # ⭐ NEW — 运行时动态生成目录
 │   └── products/                      # 产品图（由 multer 创建）
@@ -309,7 +312,7 @@ backend/
 ├── .gitignore
 ├── package.json
 ├── README.md
-└── PROJECT_STRUCTURE.md
+
 
 ---
 
@@ -357,6 +360,7 @@ frontend/
 ├── src/
 │   ├── app.html
 │   ├── app.css
+│   ├── hooks.server.js
 │
 │   ├── routes/
 │   │   ├── +layout.svelte
@@ -571,6 +575,9 @@ frontend/
 │   │   │   │   └── [id]/                     # ⭐ 量体记录查看页（只读）
 │   │   │   │       ├── +page.server.js
 │   │   │   │       └── +page.svelte
+│   │   │   │       ├── edit/
+│   │   │   │       │   ├── +page.server.js   新增 
+│   │   │   │       │   └── +page.svelte      新增
 │   │   │
 │   │   │   ├── payments/
 │   │   │   │   ├── +page.server.js
@@ -671,8 +678,6 @@ frontend/
 │   │       ├── order.d.ts
 │   │       └── user.d.ts
 │
-│   ├── hooks.server.js
-│
 ├── static/
 │   ├── images/
 │   ├── fonts/
@@ -683,15 +688,14 @@ frontend/
 │   ├── integration/
 │   └── e2e/
 │
-├── .env
+├── .env.production
 ├── .env.development
-├── .env.example
 ├── svelte.config.js
 ├── vite.config.js
 ├── tailwind.config.js
 ├── package.json
 └── .gitignore
-
+└── .postcss.config.js
 
 ---
 

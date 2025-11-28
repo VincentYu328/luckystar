@@ -691,31 +691,40 @@ GROUP BY p.id;
 -- 29. v_fabric_stock（布料库存：IN - OUT）
 ----------------------------------------------------------------------
 
+DROP VIEW IF EXISTS v_fabric_stock;
+
 CREATE VIEW v_fabric_stock AS
 WITH incoming AS (
-  SELECT fabric_id, COALESCE(SUM(quantity),0) AS total_in
+  SELECT
+    fabric_id AS product_id,
+    COALESCE(SUM(quantity), 0) AS total_in
   FROM fabric_incoming
   GROUP BY fabric_id
 ),
 usage AS (
-  SELECT fabric_id, COALESCE(SUM(used_quantity),0) AS total_used
+  SELECT
+    fabric_id AS product_id,
+    COALESCE(SUM(used_quantity), 0) AS total_used
   FROM garment_fabric_usage
   GROUP BY fabric_id
 )
 SELECT
-  p.id AS fabric_id,
+  p.id AS fabric_id,          -- ⭐ 正确：保持这个给前端使用
   p.sku,
   p.name AS fabric_name,
   p.material,
   p.pattern,
   p.width_cm,
-  COALESCE(i.total_in,0) AS total_in,
-  COALESCE(u.total_used,0) AS total_used,
-  COALESCE(i.total_in,0) - COALESCE(u.total_used,0) AS stock_balance
+
+  COALESCE(i.total_in, 0) AS total_in,
+  COALESCE(u.total_used, 0) AS total_used,
+
+  COALESCE(i.total_in, 0) - COALESCE(u.total_used, 0) AS stock_balance
 FROM products p
-LEFT JOIN incoming i ON i.fabric_id = p.id
-LEFT JOIN usage u ON u.fabric_id = p.id
-WHERE p.product_type='fabric';
+LEFT JOIN incoming i ON i.product_id = p.id
+LEFT JOIN usage u ON u.product_id = p.id
+WHERE p.product_type = 'fabric'
+ORDER BY p.sku ASC;
 
 
 /* ===========================================================

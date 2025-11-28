@@ -54,7 +54,8 @@ router.post('/:id/upload',
 
       const fileUrl = `/uploads/products/${productId}/${req.file.filename}`;
 
-      const result = ProductImagesService.addImage(req.user?.id ?? null, {
+      // 确保 addImage 是异步处理
+      const result = await ProductImagesService.addImage(req.user?.id ?? null, {
         product_id: productId,
         url: fileUrl
       });
@@ -80,7 +81,16 @@ router.delete('/:imageId',
   async (req, res) => {
     try {
       const imageId = Number(req.params.imageId);
-      const result = ProductImagesService.deleteImage(req.user?.id ?? null, imageId);
+
+      // 获取图片文件名和路径
+      const image = await ProductImagesService.getImageById(imageId);
+      const imagePath = path.join(ROOT, 'uploads', 'products', String(image.product_id), image.filename);
+      
+      // 删除文件
+      fs.unlinkSync(imagePath);
+
+      // 删除数据库记录
+      const result = await ProductImagesService.deleteImage(req.user?.id ?? null, imageId);
       return res.json(result);
     } catch (err) {
       console.error(err);
@@ -95,7 +105,7 @@ router.put('/:imageId/primary',
   async (req, res) => {
     try {
       const imageId = Number(req.params.imageId);
-      const result = ProductImagesService.setPrimary(req.user?.id ?? null, imageId);
+      const result = await ProductImagesService.setPrimary(req.user?.id ?? null, imageId);
       return res.json(result);
     } catch (err) {
       console.error(err);

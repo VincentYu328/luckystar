@@ -1,44 +1,62 @@
 // frontend/src/routes/admin/inventory/adjust/+page.server.js
-import { apiGet, apiPost } from '$lib/server/api.js';
+import { api } from '$lib/server/api.js';
 import { error, redirect } from '@sveltejs/kit';
 
+// --------------------------------------------------
+// load()
+// --------------------------------------------------
 export async function load({ locals }) {
     const user = locals.authUser;
 
-    // ⭐ 只有 Head（Admin）才可以进入
-    if (!user || user.type !== 'staff' || user.role !== 'Head') {
+    // ⭐ 只有 Admin/Head
+    if (!user || user.type !== 'staff' || user.role_name !== 'admin') {
         throw error(403, 'Forbidden');
     }
 
-    // 获取布料库存（from v_fabric_stock）
-    const fabrics = await apiGet('/inventory/fabric');
+    // ⭐ 模式 A：不传 fetch/cookies
+    const res = await api.inventory.fabricList();
 
     return {
-        fabrics: fabrics.items ?? []
+        fabrics: Array.isArray(res.items) ? res.items : []
     };
 }
 
+// --------------------------------------------------
+// actions.adjust
+// --------------------------------------------------
 export const actions = {
     adjust: async ({ locals, request }) => {
         const user = locals.authUser;
 
-        // ⭐ 只有 Head（Admin）才可以操作
-        if (!user || user.type !== 'staff' || user.role !== 'Head') {
+        if (!user || user.type !== 'staff' || user.role_name !== 'admin') {
             throw error(403, 'Forbidden');
         }
 
         const form = await request.formData();
 
-        const payload = {
-            product_id: form.get('product_id'),
-            new_quantity: Number(form.get('new_quantity')),
-            note: form.get('note') ?? ''
-        };
+        const product_id = Number(form.get('product_id'));
+        const new_quantity = Number(form.get('new_quantity'));
+        const note = form.get('note') || '';
 
-        const res = await apiPost('/inventory/adjust', payload);
+        if (!product_id || Number.isNaN(new_quantity)) {
+            return {
+                success: false,
+                error: 'product_id and valid new_quantity are required.'
+            };
+        }
 
-        if (!res.success) {
-            return { error: res.error || 'Adjustment failed' };
+        // ⭐ 模式 A：只传 data，不传 ctx
+        const res = await api.inventory.adjust({
+            product_id,
+            new_quantity,
+            reason: note
+        });
+
+        if (res?.error) {
+            return {
+                success: false,
+                error: res.error
+            };
         }
 
         throw redirect(303, '/admin/inventory');

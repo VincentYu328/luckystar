@@ -2,85 +2,97 @@
 import { api } from '$lib/server/api.js';
 import { error } from '@sveltejs/kit';
 
-export async function load({ params, locals, fetch, cookies }) {
-  const user = locals.authUser;
-  if (!user || user.type !== 'staff') {
-    throw error(403, 'Forbidden');
-  }
+export async function load({ params, locals }) {
+    const user = locals.authUser;
+    if (!user || user.type !== 'staff') {
+        throw error(403, 'Forbidden');
+    }
 
-  const { id } = params;
+    // ⭐ 必须确保是数字
+    const id = Number(params.id);
 
-  const productRes = await api.products.get({ fetch, cookies }, id);
-  const product = productRes.product ?? productRes;
+    console.log("🔍 Load product id =", id);
 
-  if (!product) throw error(404, 'Product not found');
+    // ⭐ 完全正确的调用方式（模式 A）
+    const res = await api.products.get(id);
 
-  const categoriesRes = await api.products.listCategories({ fetch, cookies });
-  const categories = categoriesRes.categories ?? [];
+    // 响应可能是 { product: {...} } 或直接 {...}
+    const product = res.product ?? res;
 
-  return {
-    product,
-    categories,
-    error: null,
-    success: false,
-    values: null
-  };
+    if (!product) {
+        throw error(404, "Product not found");
+    }
+
+    // 读取分类
+    const catRes = await api.products.listCategories();
+    const categories = catRes.categories ?? [];
+
+    return {
+        product,
+        categories,
+        error: null,
+        success: false,
+        values: null
+    };
 }
 
 
 export const actions = {
-  default: async ({ params, request, locals, fetch, cookies }) => {
-    const user = locals.authUser;
-    if (!user || user.type !== 'staff') {
-      throw error(403, 'Forbidden');
+    default: async ({ params, request, locals }) => {
+        const user = locals.authUser;
+        if (!user || user.type !== 'staff') {
+            throw error(403, 'Forbidden');
+        }
+
+        const id = Number(params.id);
+
+        const form = await request.formData();
+        const payload = Object.fromEntries(form);
+
+        console.log("📝 Incoming payload:", payload);
+
+        const clean = {
+            ...payload,
+            base_price: payload.base_price ? parseFloat(payload.base_price) : null,
+            category_id: payload.category_id ? parseInt(payload.category_id) : null
+        };
+
+        const allCatsRes = await api.products.listCategories();
+        const allCats = allCatsRes.categories ?? [];
+
+        const fabricCat = allCats.find(c => c.code === 'fabric');
+        const garmentCat = allCats.find(c => c.code === 'garment');
+
+        let finalType = clean.product_type;
+        const catId = clean.category_id;
+
+        if (!finalType) {
+            if (fabricCat && catId === fabricCat.id) {
+                finalType = "fabric";
+            } else if (garmentCat) {
+                const children = allCats.filter(c => c.parent_id === garmentCat.id);
+                if (children.find(c => c.id === catId)) {
+                    finalType = "garment";
+                }
+            }
+        }
+
+        if (!finalType) finalType = "garment";
+        clean.product_type = finalType;
+
+        console.log("➡ Final payload to backend:", clean);
+
+        // ⭐ 完全正确的调用方式
+        try {
+            const res = await api.products.update(id, clean);
+
+            if (res?.error) {
+                return { success: false, error: res.error, values: payload };
+            }
+
+            return { success: true, error: null, values: clean };
+        } catch (err) {
+            return { success: false, error: err.message, values: payload };
+        }
     }
-
-    const { id } = params;
-    const form = await request.formData();
-    const payload = Object.fromEntries(form);
-
-    console.log("📝 Incoming:", payload);
-
-    // 数字清洗
-    const cleanPayload = {
-      ...payload,
-      base_price: payload.base_price ? parseFloat(payload.base_price) : null,
-      category_id: payload.category_id ? parseInt(payload.category_id) : null
-    };
-
-    // -------- 自动 product_type 推断 --------
-    const categoriesRes = await api.products.listCategories({ fetch, cookies });
-    const allCats = categoriesRes.categories ?? [];
-
-    const fabricCat = allCats.find(c => c.code === 'fabric');
-    const garmentCat = allCats.find(c => c.code === 'garment');
-
-    let finalType = cleanPayload.product_type;
-
-    const catId = cleanPayload.category_id;
-
-    if (!finalType) {
-      if (fabricCat && catId === fabricCat.id) finalType = "fabric";
-      else if (garmentCat) {
-        const children = allCats.filter(c => c.parent_id === garmentCat.id);
-        if (children.find(c => c.id === catId)) finalType = "garment";
-      }
-    }
-
-    if (!finalType) finalType = "garment";
-
-    cleanPayload.product_type = finalType;
-
-    console.log("➡ Final payload:", cleanPayload);
-
-    try {
-      const res = await api.products.update({ fetch, cookies }, id, cleanPayload);
-      if (res.error) {
-        return { success: false, error: res.error, values: payload };
-      }
-      return { success: true, error: null, values: cleanPayload };
-    } catch (err) {
-      return { success: false, error: err.message, values: payload };
-    }
-  }
 };

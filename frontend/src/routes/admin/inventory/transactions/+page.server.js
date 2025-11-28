@@ -1,26 +1,29 @@
 // frontend/src/routes/admin/inventory/transactions/+page.server.js
-import { apiGet } from '$lib/server/api.js';
+import { api } from '$lib/server/api.js';
 import { error } from '@sveltejs/kit';
 
 export async function load({ locals }) {
     const user = locals.authUser;
-
     if (!user || user.type !== 'staff') {
         throw error(403, 'Forbidden');
     }
 
-    // 所有库存流水
-    const tx = await apiGet('/inventory/transactions');
+    // 1) 库存流水
+    const txRes = await api.inventory.transactions();
+    const txRows = Array.isArray(txRes.items) ? txRes.items : [];
 
-    // 产品（用于显示 SKU / 名称）
-    const products = await apiGet('/products/all');
+    // 2) 产品列表
+    const prodRes = await api.products.list();
+    
+    // ★ 这里必须根据你真实的后端返回字段来改：
+    // 假设后端返回 { items: [...] }
+    const products = Array.isArray(prodRes.items) ? prodRes.items : [];
 
-    // 转换为 Map 方便查
     const productMap = new Map();
-    (products.products ?? []).forEach(p => productMap.set(p.id, p));
+    products.forEach(p => productMap.set(p.id, p));
 
-    // 为每条流水加 SKU / 名称
-    const rows = (tx.transactions ?? []).map(t => {
+    // 3) 追加 SKU
+    const rows = txRows.map(t => {
         const p = productMap.get(t.product_id);
         return {
             ...t,

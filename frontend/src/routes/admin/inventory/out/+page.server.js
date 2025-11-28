@@ -1,47 +1,72 @@
 // frontend/src/routes/admin/inventory/out/+page.server.js
-import { apiGet, apiPost } from '$lib/server/api.js';
+import { api } from '$lib/server/api.js';
 import { error, redirect } from '@sveltejs/kit';
 
 export async function load({ locals }) {
     const user = locals.authUser;
+    if (!user || user.type !== 'staff') throw error(403);
 
-    if (!user || user.type !== 'staff') {
-        throw error(403, 'Forbidden');
-    }
-
-    // 获取所有 fabric
-    const fabrics = await apiGet('/products/all-fabrics');
-
-    // 获取所有成衣（可选：可能为 null）
-    const garments = await apiGet('/products/all-garments');
+    const fabricRes = await api.inventory.fabricList();
+    const garmentRes = await api.inventory.garmentList();
 
     return {
-        fabrics: fabrics.fabrics ?? [],
-        garments: garments.garments ?? []
+        fabrics: Array.isArray(fabricRes.items) ? fabricRes.items : [],
+        garments: Array.isArray(garmentRes.items) ? garmentRes.items : [],
+        user
     };
 }
 
 export const actions = {
     create: async ({ request, locals }) => {
         const user = locals.authUser;
-        if (!user || user.type !== 'staff') {
-            throw error(403, 'Forbidden');
+        if (!user || user.type !== 'staff') throw error(403);
+
+        const formData = await request.formData();
+        const payload = Object.fromEntries(formData);
+
+        console.log("\n===========================");
+        console.log("📥 RAW FORM DATA:", payload);
+
+        // ★ 修复1：把 "" 转为 null ————避免外键错误
+        for (const key in payload) {
+            if (payload[key] === "") {
+                console.log(`🔄 Empty string detected → converting: ${key} = null`);
+                payload[key] = null;
+            }
         }
 
-        const form = await request.formData();
-        const payload = Object.fromEntries(form);
+        console.log("📦 CLEANED PAYLOAD:", payload);
 
         const { fabric_id, used_quantity } = payload;
 
+        // ★ 打印关键字段
+        console.log("🔎 fabric_id:", fabric_id);
+        console.log("🔎 used_quantity:", used_quantity);
+        console.log("🔎 garment_id:", payload.garment_id);
+
         if (!fabric_id || !used_quantity) {
+            console.log("❌ Missing required fields");
             return {
                 success: false,
-                message: 'Fabric and used quantity are required.'
+                error: "fabric_id and used_quantity are required."
             };
         }
 
-        // 写入后端 fabric usage
-        await apiPost('/inventory/out', payload);
+        console.log("➡️ Calling API: inventory.fabricOut()");
+        const res = await api.inventory.fabricOut(payload);
+
+        console.log("📨 API Response:", res);
+
+        if (res?.error) {
+            console.log("❌ API ERROR:", res.error);
+            return {
+                success: false,
+                error: res.error
+            };
+        }
+
+        console.log("✅ SUCCESS: Redirecting to /admin/inventory");
+        console.log("===========================\n");
 
         throw redirect(303, '/admin/inventory');
     }

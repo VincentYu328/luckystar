@@ -15,6 +15,7 @@ import retailOrderRoutes from './retailOrderRoutes.js';
 import paymentRoutes from './paymentRoutes.js';
 import auditRoutes from './auditRoutes.js';
 import adminRoutes from './adminRoutes.js';
+import inventoryRoutes from './inventoryRoutes.js';
 
 const router = express.Router();
 
@@ -50,5 +51,6 @@ router.use('/retail-orders', retailOrderRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/audits', auditRoutes);
 router.use('/admin', adminRoutes);
+router.use('/inventory', inventoryRoutes);
 
 export default router;

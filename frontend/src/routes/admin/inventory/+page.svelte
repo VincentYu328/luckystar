@@ -1,28 +1,74 @@
+<!-- frontend/src/routes/admin/inventory/+page.svelte -->
+
 <script>
     export let data;
 
-    const fabric = data.fabricStock;
-    const garments = data.garmentStock;
+    // =============================
+    // 类型防御（防止 SSR 崩溃）
+    // =============================
+    const fabric = Array.isArray(data.fabricStock) ? data.fabricStock : [];
+    const garments = Array.isArray(data.garmentStock) ? data.garmentStock : [];
+
+    // 用户对象（用于 Head/Admin 权限判断）
+    const user = data.user ?? null;
 </script>
 
 <div class="space-y-10">
 
+    <!-- 页面标题 -->
     <h1 class="text-3xl font-semibold tracking-tight">
         Inventory Overview（库存总览）
     </h1>
 
-    <!-- ========================= -->
-    <!-- Fabric Stock (布料库存)     -->
-    <!-- ========================= -->
+    <!-- ======================================
+         操作入口区：入库 / 使用 / 流水 / 盘点
+    ======================================= -->
+    <div class="flex flex-wrap gap-4 mb-6">
+
+        <!-- 入库 -->
+        <a
+            href="/admin/inventory/in"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+            + Fabric Incoming（布料入库）
+        </a>
+
+        <!-- 使用 -->
+        <a
+            href="/admin/inventory/out"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        >
+            + Fabric Usage（布料使用）
+        </a>
+
+        <!-- 流水 -->
+        <a
+            href="/admin/inventory/transactions"
+            class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
+        >
+            Inventory Transactions（库存流水）
+        </a>
+
+        <!-- 盘点（仅 Admin / Head） -->
+        {#if user?.role_name === 'admin'}
+            <a
+                href="/admin/inventory/adjust"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+                Inventory Adjustment（库存盘点）
+            </a>
+        {/if}
+
+    </div>
+
+    <!-- ============================
+         布料库存（Fabric Stock）
+    ============================= -->
     <section>
-        <h2 class="text-xl font-semibold mb-4">
-            Fabric Stock（布料库存）
-        </h2>
+        <h2 class="text-xl font-semibold mb-4">Fabric Stock（布料库存）</h2>
 
         {#if fabric.length === 0}
-            <p class="text-gray-500">
-                No fabric records.（暂无布料记录）
-            </p>
+            <p class="text-gray-500">No fabric records.（暂无布料记录）</p>
         {:else}
             <div class="overflow-x-auto border rounded-lg bg-white">
                 <table class="w-full text-left">
@@ -57,18 +103,14 @@
         {/if}
     </section>
 
-    <!-- ========================= -->
-    <!-- Garment Stock (成衣库存)  -->
-    <!-- ========================= -->
+    <!-- ============================
+         成衣库存（Garment Stock）
+    ============================= -->
     <section>
-        <h2 class="text-xl font-semibold mb-4">
-            Garment Stock（成衣库存）
-        </h2>
+        <h2 class="text-xl font-semibold mb-4">Garment Stock（成衣库存）</h2>
 
         {#if garments.length === 0}
-            <p class="text-gray-500">
-                No garment inventory.（暂无成衣库存）
-            </p>
+            <p class="text-gray-500">No garment inventory.（暂无成衣库存）</p>
         {:else}
             <div class="overflow-x-auto border rounded-lg bg-white">
                 <table class="w-full text-left">
@@ -87,9 +129,7 @@
                             <td class="p-3">{g.sku}</td>
                             <td class="p-3">{g.product_name}</td>
                             <td class="p-3">{g.quantity_on_hand}</td>
-                            <td class="p-3">
-                                {g.needs_reorder ? '⚠️ Yes（是）' : '—'}
-                            </td>
+                            <td class="p-3">{g.needs_reorder ? '⚠️ Yes（是）' : '—'}</td>
                             <td class="p-3">{g.last_updated}</td>
                         </tr>
                         {/each}

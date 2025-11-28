@@ -1,43 +1,47 @@
 // frontend/src/routes/admin/inventory/in/+page.server.js
-import { apiGet, apiPost } from '$lib/server/api.js';
+import { api } from '$lib/server/api.js';
 import { error, redirect } from '@sveltejs/kit';
 
+// =============================
+// LOAD — 加载布料列表
+// =============================
 export async function load({ locals }) {
     const user = locals.authUser;
-
     if (!user || user.type !== 'staff') {
-        throw error(403, 'Forbidden');
+        throw error(403);
     }
 
-    // 取得所有 fabric（product_type = fabric）
-    const res = await apiGet('/products/all-fabrics');
+    const res = await api.inventory.fabricList();
 
     return {
-        fabrics: res.fabrics ?? []
+        fabrics: Array.isArray(res.items) ? res.items : [],
+        user: user
     };
 }
 
+// =============================
+// ACTIONS — 创建入库记录
+// =============================
 export const actions = {
     create: async ({ request, locals }) => {
         const user = locals.authUser;
         if (!user || user.type !== 'staff') {
-            throw error(403, 'Forbidden');
+            throw error(403);
         }
 
-        const form = await request.formData();
-        const payload = Object.fromEntries(form);
+        const form = Object.fromEntries(await request.formData());
 
-        // 必填字段验证
-        if (!payload.fabric_id || !payload.quantity) {
-            return {
-                success: false,
-                message: 'Fabric and quantity are required.'
-            };
+        const { fabric_id, quantity } = form;
+        if (!fabric_id || !quantity) {
+            return { success: false, error: "fabric_id and quantity required" };
         }
 
-        await apiPost('/inventory/in', payload);
+        const res = await api.inventory.fabricIn(form);
 
-        // 成功后跳回 inventory 首页
+        if (res?.error) {
+            return { success: false, error: res.error };
+        }
+
         throw redirect(303, '/admin/inventory');
     }
 };

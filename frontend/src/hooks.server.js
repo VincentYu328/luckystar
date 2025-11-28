@@ -2,15 +2,20 @@
 import jwt from 'jsonwebtoken';
 import { initApi } from '$lib/server/api.js';
 
+/**
+ * Lucky Star — 全局请求处理器
+ * 模式 A（自动注入 fetch + cookies）
+ */
 export async function handle({ event, resolve }) {
 
   /* ============================================
-     1) 注入 fetch（必须最先执行）
+     1) 初始化 API 模块（必须最先执行）
+     ⭐ 模式 A 的核心：注入 fetch + cookies
      ============================================ */
-  initApi(event.fetch);
+  initApi(event.fetch, event.cookies);
 
   /* ============================================
-     2) 初始化用户对象
+     2) 解析用户身份（staff / customer）
      ============================================ */
   event.locals.authUser = null;
 
@@ -21,21 +26,18 @@ export async function handle({ event, resolve }) {
       const decoded = jwt.decode(token);
 
       if (!decoded) {
-        // JWT 无法解析 → 清 token
         event.cookies.delete('access_token', { path: '/' });
 
       } else if (decoded.userId) {
-        // 后台 Staff
         event.locals.authUser = {
           id: decoded.userId,
           type: 'staff',
-          role: decoded.role || 'staff',
+          role_name: decoded.role || 'staff',
           full_name: decoded.full_name,
           email: decoded.email
         };
 
       } else if (decoded.customerId) {
-        // 前台 Customer
         event.locals.authUser = {
           id: decoded.customerId,
           type: 'customer',
@@ -44,26 +46,30 @@ export async function handle({ event, resolve }) {
         };
 
       } else {
-        // token 格式怪异 → 删除
         event.cookies.delete('access_token', { path: '/' });
       }
 
     } catch (err) {
-      console.error('JWT decode error:', err);
+      console.error('⚠️ JWT decode error:', err);
       event.cookies.delete('access_token', { path: '/' });
     }
   }
 
   /* ============================================
-     3) 返回响应（让 SvelteKit 继续处理）
+     3) 返回响应
      ============================================ */
-  return resolve(event);
+  return await resolve(event);
 }
 
-
-/* ============================================
-   全局错误捕获
-   ============================================ */
-export function handleError({ error }) {
+/**
+ * 全局错误处理
+ */
+export function handleError({ error, event }) {
   console.error('⚠️ Server Error:', error);
+  console.error('Request:', event.url.pathname);
+
+  return {
+    message: 'An unexpected error occurred. Please try again later.',
+    code: error?.code ?? 'UNKNOWN_ERROR'
+  };
 }
