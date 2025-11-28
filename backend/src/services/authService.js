@@ -11,15 +11,17 @@ import {
 class AuthService {
 
   // =====================================================
-  // Token 生成
+  // Token 生成（🔥 修改：包含权限）
   // =====================================================
-static issueTokens(user) {
+  static issueTokens(user, permissions = []) {
     return {
       accessToken: signAccessToken({
         userId: user.id,
         role: user.role_name,
+        role_name: user.role_name,  // 兼容性
         full_name: user.full_name,
-        email: user.email
+        email: user.email,
+        permissions  // 🔥 添加权限数组
       }),
       refreshToken: signRefreshToken({
         userId: user.id
@@ -28,7 +30,7 @@ static issueTokens(user) {
   }
 
   // =====================================================
-  // 登录
+  // 登录（🔥 修改：获取并传递权限）
   // =====================================================
   static async login(email, password) {
     const user = UsersDAO.getUserByEmail(email);
@@ -40,7 +42,7 @@ static issueTokens(user) {
         action: 'login_failed',
         targetType: 'auth',
         targetId: null,
-        details: { email }
+        details: JSON.stringify({ email })
       });
       throw new Error('Invalid email or password');
     }
@@ -52,7 +54,7 @@ static issueTokens(user) {
         action: 'login_denied_inactive',
         targetType: 'user',
         targetId: user.id,
-        details: { email }
+        details: JSON.stringify({ email })
       });
       throw new Error('User is disabled');
     }
@@ -65,21 +67,24 @@ static issueTokens(user) {
         action: 'login_failed_password',
         targetType: 'auth',
         targetId: user.id,
-        details: { email }
+        details: JSON.stringify({ email })
       });
       throw new Error('Invalid email or password');
     }
 
+    // 🔥 关键：获取用户权限
+    const permissions = UsersDAO.getUserPermissions(user.id) || [];
 
     UsersDAO.logAction({
       userId: user.id,
       action: 'login_success',
       targetType: 'user',
       targetId: user.id,
-      details: { email }
+      details: JSON.stringify({ email })
     });
 
-    const tokens = this.issueTokens(user);
+    // 🔥 生成包含权限的 token
+    const tokens = this.issueTokens(user, permissions);
 
     return {
       user: {
@@ -88,7 +93,8 @@ static issueTokens(user) {
         email: user.email,
         position: user.position_name,
         role: user.role_name,
-        must_change_password: user.must_change_password
+        must_change_password: user.must_change_password,
+        permissions  // 🔥 返回权限给前端
       },
       tokens
     };
@@ -143,7 +149,7 @@ static issueTokens(user) {
         action: 'force_reset_denied_not_admin',
         targetType: 'user',
         targetId: targetUserId,
-        details: { attempted_by: adminUserId }
+        details: JSON.stringify({ attempted_by: adminUserId })
       });
       throw new Error('Only admin can reset user passwords');
     }
@@ -159,7 +165,7 @@ static issueTokens(user) {
       action: 'admin_force_reset_password',
       targetType: 'user',
       targetId: targetUserId,
-      details: { by: adminUserId }
+      details: JSON.stringify({ by: adminUserId })
     });
 
     return { success: true };
@@ -190,7 +196,7 @@ static issueTokens(user) {
   }
 
   // =====================================================
-  // 刷新 Access Token
+  // 刷新 Access Token（🔥 修改：重新获取权限）
   // =====================================================
   static refreshToken(refreshToken) {
     const decoded = verifyRefreshToken(refreshToken);
@@ -198,11 +204,16 @@ static issueTokens(user) {
 
     if (!user) throw new Error('User not found');
 
+    // 🔥 重新获取最新权限（因为权限可能已更新）
+    const permissions = UsersDAO.getUserPermissions(user.id) || [];
+
     const newToken = signAccessToken({
       userId: user.id,
       role: user.role_name,
+      role_name: user.role_name,
       full_name: user.full_name,
-      email: user.email
+      email: user.email,
+      permissions  // 🔥 包含权限
     });
 
     UsersDAO.logAction({

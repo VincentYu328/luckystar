@@ -243,12 +243,12 @@ export const api = {
 
     // ---------------- AUDIT ----------------
     audit: {
-        list() { return request('GET', '/audit'); },
-        get(id) { return request('GET', `/audit/${id}`); },
-        byUser(userId) { return request('GET', '/audit', null, {}, { user: userId }); },
-        byAction(action) { return request('GET', '/audit', null, {}, { action }); },
+        list() { return request('GET', '/audits'); },
+        get(id) { return request('GET', `/audits/${id}`); },
+        byUser(userId) { return request('GET', '/audits', null, {}, { user: userId }); },
+        byAction(action) { return request('GET', '/audits', null, {}, { action }); },
         byTarget(type, id) {
-            return request('GET', '/audit', null, {}, { target_type: type, target_id: id });
+            return request('GET', '/audits', null, {}, { target_type: type, target_id: id });
         },
     },
 };

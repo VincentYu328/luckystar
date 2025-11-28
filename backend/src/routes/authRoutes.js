@@ -9,12 +9,12 @@ const router = express.Router();
 /**
  * 登录
  */
-// LOGIN
+// backend/src/routes/authRoutes.js -> /login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const { user, tokens } = await AuthService.login(email, password);
 
+    const { user, tokens } = await AuthService.login(email, password);
     const isProd = process.env.NODE_ENV === 'production';
 
     const cookieSettings = {
@@ -22,17 +22,39 @@ router.post('/login', async (req, res) => {
       secure: isProd,
       sameSite: isProd ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000,
-      path: '/'            // ⭐⭐ 关键补充，全站有效
+      path: '/'
     };
-    res.cookie('access_token', tokens.accessToken, cookieSettings);
-    res.cookie('refresh_token', tokens.refreshToken, { ...cookieSettings, maxAge: 7 * 86400 * 1000 });
 
-    return res.json({ user });
+    // 使用 AuthService.login 返回的正确 tokens
+    res.cookie('access_token', tokens.accessToken, cookieSettings);
+    res.cookie('refresh_token', tokens.refreshToken, {
+      ...cookieSettings,
+      maxAge: 7 * 86400 * 1000
+    });
+
+    // 记录登录日志
+    UsersDAO.logAction({
+      userId: user.id,
+      action: 'login',
+      targetType: 'user',
+      targetId: user.id,
+      details: JSON.stringify({ ip: req.ip })
+    });
+
+    // user 对象现在应该包含 permissions 属性（由 AuthService.login 添加）
+    return res.json({
+      user: {
+        ...user,
+        // ⚠️ 注意：如果 user 对象在 service 层没有 permissions 属性，则需要显式添加：
+        // permissions: user.permissions 
+      }
+    });
 
   } catch (err) {
     return res.status(401).json({ error: err.message });
   }
 });
+
 
 /**
  * 刷新 Access Token
@@ -44,12 +66,28 @@ router.post('/refresh', (req, res) => {
       return res.status(401).json({ error: 'No refresh token' });
     }
 
-    const { accessToken } = AuthService.refreshToken(refresh);
+    const decoded = AuthService.verifyRefresh(refresh);
+
+    // 🔥 重新获取用户权限（因为权限可能已更新）
+    const permissions = UsersDAO.getUserPermissions(decoded.userId) || [];
+    const user = UsersDAO.getUserById(decoded.userId);
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // 生成新的 access token（包含最新权限）
+    const { accessToken } = AuthService.generateTokensWithPermissions(
+      user,
+      permissions
+    );
+
+    const isProd = process.env.NODE_ENV === 'production';
 
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000,
       path: '/'
     });
@@ -95,6 +133,9 @@ router.get('/me', (req, res) => {
     const user = UsersDAO.getUserById(decoded.userId);
     if (!user) return res.json({ user: null });
 
+    // 🔥 返回权限信息
+    const permissions = decoded.permissions || UsersDAO.getUserPermissions(user.id) || [];
+
     return res.json({
       user: {
         id: user.id,
@@ -103,7 +144,8 @@ router.get('/me', (req, res) => {
         position: user.position_name,
         role: user.role_name,
         must_change_password: user.must_change_password,
-        is_active: user.is_active
+        is_active: user.is_active,
+        permissions  // 🔥 添加权限
       }
     });
   } catch (_) {

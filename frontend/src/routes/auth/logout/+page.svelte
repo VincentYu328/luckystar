@@ -1,11 +1,20 @@
-<li><button on:click={handleLogout} class="logout-btn">Logout</button></li>
-
 <script>
-  import { logout } from '$lib/stores/auth.js';
-  import { goto } from '$app/navigation';
+    import { enhance } from '$app/forms';
+    import { onMount } from 'svelte';
 
-  async function handleLogout() {
-      await logout();     // 前端 store 自动刷新
-      goto('/');          // 强制导航刷新
-  }
+    let formNode;
+
+    // 组件挂载后立即提交表单
+    onMount(() => {
+        if (formNode) {
+            formNode.submit();
+        }
+    });
 </script>
+
+<div class="logout-page">
+    <h1 class="text-center">正在安全退出，请稍候...</h1>
+    
+    <form method="POST" use:enhance bind:this={formNode} style="display: none;">
+        </form>
+</div>

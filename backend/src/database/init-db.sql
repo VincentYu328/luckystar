@@ -35,12 +35,15 @@ CREATE TABLE role_hierarchy (
   CHECK (parent_role_id != child_role_id)
 );
 
+-- Admin 继承 Manager 的权限
 INSERT INTO role_hierarchy (parent_role_id, child_role_id)
 SELECT p.id, c.id FROM roles p, roles c
-WHERE p.name='sales' AND c.name='manager';
+WHERE p.name='admin' AND c.name='manager';
+
+-- Manager 继承 Sales 的权限
 INSERT INTO role_hierarchy (parent_role_id, child_role_id)
 SELECT p.id, c.id FROM roles p, roles c
-WHERE p.name='manager' AND c.name='admin';
+WHERE p.name='manager' AND c.name='sales';
 
 
 ----------------------------------------------------------------------
