@@ -1,4 +1,4 @@
-// backend\src\routes\customerRoutes.js
+// backend/src/routes/customerRoutes.js (完整最终修正版)
 
 import express from 'express';
 import CustomerService from '../services/customerService.js';
@@ -13,386 +13,429 @@ const router = express.Router();
    工具：判断 customer 是否访问自己的数据
 ====================================================== */
 function isSelf(req) {
-  return (
-    req.user?.role === 'customer' &&
-    Number(req.params.id) === req.user.customerId
-  );
+    return (
+        req.user?.role === 'customer' &&
+        Number(req.params.id) === req.user.customerId
+    );
 }
-
 
 /* ======================================================
    MY 页面（customer 前台）
 ====================================================== */
 
 // GET /api/customers/me
-router.get('/me', requireCustomerAuth, (req, res) => {
-  const me = CustomerService.getCustomerById(req.customer.id);
-  res.json(me);
+router.get('/me', requireCustomerAuth, async (req, res) => {
+    try {
+        const me = await CustomerService.getCustomerById(req.customer.id);
+        res.json(me);
+    } catch (err) {
+        console.error("Error fetching /me:", err);
+        res.status(404).json({ error: err.message });
+    }
 });
 
-// PUT /api/customers/me  ← 更新 Profile
-router.put('/me', requireCustomerAuth, (req, res) => {
-  try {
-    const updated = CustomerService.updateMyProfile(req.customer.id, req.body);
-    res.json(updated);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+// PUT /api/customers/me ← 更新 Profile
+router.put('/me', requireCustomerAuth, async (req, res) => {
+    try {
+        const updated = await CustomerService.updateMyProfile(req.customer.id, req.body);
+        res.json(updated);
+    } catch (err) {
+        console.error("Error updating /me:", err);
+        res.status(400).json({ error: err.message });
+    }
 });
 
 /* ============================
    MY — Profile
 ============================ */
-
-router.get('/me/profile', requireCustomerAuth, (req, res) => {
-  const me = CustomerService.getMyProfile(req.customer.id);
-  res.json({ profile: me });
+router.get('/me/profile', requireCustomerAuth, async (req, res) => {
+    try {
+        const me = await CustomerService.getMyProfile(req.customer.id);
+        res.json({ profile: me });
+    } catch (err) {
+        console.error("Error fetching /me/profile:", err);
+        res.status(404).json({ error: err.message });
+    }
 });
 
-router.put('/me/profile', requireCustomerAuth, (req, res) => {
-  try {
-    CustomerService.updateMyProfile(req.customer.id, req.body);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+router.put('/me/profile', requireCustomerAuth, async (req, res) => {
+    try {
+        await CustomerService.updateMyProfile(req.customer.id, req.body);
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error updating /me/profile:", err);
+        res.status(400).json({ error: err.message });
+    }
 });
 
 /* ============================
    MY — Measurements（顾客端）
 ============================ */
-
-// GET 最新一条测量
-router.get('/me/measurements', requireCustomerAuth, (req, res) => {
-  const m = CustomerService.getMyMeasurements(req.customer.id);
-  res.json({ measurements: m });
+router.get('/me/measurements', requireCustomerAuth, async (req, res) => {
+    try {
+        const m = await CustomerService.getMyMeasurements(req.customer.id);
+        res.json({ measurements: m });
+    } catch (err) {
+        console.error("Error fetching /me/measurements:", err);
+        res.status(404).json({ error: err.message });
+    }
 });
 
-// PUT 更新顾客自己的测量
-router.put('/me/measurements', requireCustomerAuth, (req, res) => {
-  try {
-    CustomerService.updateMyMeasurements(req.customer.id, req.body);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+router.put('/me/measurements', requireCustomerAuth, async (req, res) => {
+    try {
+        await CustomerService.updateMyMeasurements(req.customer.id, req.body);
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error updating /me/measurements:", err);
+        res.status(400).json({ error: err.message });
+    }
 });
 
 /* ============================
    MY — Retail Orders
 ============================ */
-
-router.get('/me/orders', requireCustomerAuth, (req, res) => {
-  const orders = CustomerService.getMyOrders(req.customer.id);
-  res.json({ orders });
-});
-
-// POST /api/customers/me/orders
-router.post('/me/orders', requireCustomerAuth, (req, res) => {
-  try {
-    const customerId = req.customer.id;
-    const { items } = req.body;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'items required' });
+router.get('/me/orders', requireCustomerAuth, async (req, res) => {
+    try {
+        const orders = await CustomerService.getMyOrders(req.customer.id);
+        res.json({ orders });
+    } catch (err) {
+        console.error("Error fetching /me/orders:", err);
+        res.status(404).json({ error: err.message });
     }
-
-    const result = RetailOrderService.createOrder(customerId, {
-      items,
-      status: 'pending',
-      source: 'web'
-    });
-
-    res.json(result);
-
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
 });
 
+router.post('/me/orders', requireCustomerAuth, async (req, res) => {
+    try {
+        const customerId = req.customer.id;
+        const { items } = req.body;
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'items required' });
+        }
+
+        const result = await RetailOrderService.createOrder(customerId, {
+            items,
+            status: 'pending',
+            source: 'web'
+        });
+
+        res.status(201).json(result);
+    } catch (err) {
+        console.error("Error creating /me/orders:", err);
+        res.status(400).json({ error: err.message });
+    }
+});
 
 /* ======================================================
    Customers（后台 staff + customer 自身访问）
 ====================================================== */
-
-// GET /api/customers
 router.get(
-  '/',
-  requireAuth,
-  requirePermission('customers.view'),
-  (req, res) => {
-    const customers = CustomerService.getAllCustomers();
-    res.json({ count: customers.length, customers });
-  }
-);
+    '/',
+    requireAuth,
+    requirePermission('customers.view'),
+    (req, res) => {
+        try {
+            // 安全处理查询关键字：去除首尾空格，空值转为 ''
+            const rawKeyword = req.query.keyword;
+            const keyword = rawKeyword ? String(rawKeyword).trim() : '';
 
-// GET /api/customers/:id
-router.get('/:id', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer') {
-    requirePermission('customers.view')(req, res, () => { });
-    if (res.headersSent) return;
-  }
+            console.log('[Backend CustomerRoutes] GET / - Received raw keyword:', rawKeyword);
+            console.log('[Backend CustomerRoutes] GET / - Processed keyword:', keyword);
 
-  if (req.user.role === 'customer' && !isSelf(req)) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
+            let customers;
 
-  try {
-    const customer = CustomerService.getCustomerById(Number(req.params.id));
-    res.json({ customer });
-  } catch (err) {
-    res.status(404).json({ error: err.message });
-  }
-});
+            // 只有当处理后的关键字非空时才走搜索，否则返回全部客户
+            if (keyword.length > 0) {
+                customers = CustomerService.search(keyword);
+            } else {
+                customers = CustomerService.getAllCustomers();
+            }
 
-// POST /api/customers
-router.post(
-  '/',
-  requireAuth,
-  requirePermission('customers.create'),
-  (req, res) => {
-    try {
-      const result = CustomerService.createCustomer(req.user.id, req.body);
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
+            res.json({ count: customers.length, customers });
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
     }
-  }
 );
 
-// PUT /api/customers/:id
-router.put('/:id', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer') {
-    requirePermission('customers.update')(req, res, () => { });
-    if (res.headersSent) return;
-  }
+router.get('/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'customer') {
+        requirePermission('customers.view')(req, res, () => {});
+        if (res.headersSent) return;
+    }
 
-  if (req.user.role === 'customer' && !isSelf(req)) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
+    if (req.user.role === 'customer' && !isSelf(req)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
 
-  try {
-    const result = CustomerService.updateCustomer(
-      req.user.id,
-      Number(req.params.id),
-      req.body
-    );
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+    try {
+        const customer = await CustomerService.getCustomerById(Number(req.params.id));
+        res.json({ customer });
+    } catch (err) {
+        console.error(`Error getting customer ID ${req.params.id}:`, err);
+        res.status(404).json({ error: err.message });
+    }
 });
 
-// DELETE /api/customers/:id
-router.delete('/:id', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer') {
-    requirePermission('customers.update')(req, res, () => { });
-    if (res.headersSent) return;
-  }
+router.post(
+    '/',
+    requireAuth,
+    requirePermission('customers.create'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.createCustomer(req.user.id, req.body);
+            res.status(201).json(result);
+        } catch (err) {
+            console.error("Error creating customer:", err);
+            res.status(400).json({ error: err.message });
+        }
+    }
+);
 
-  if (req.user.role === 'customer') {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
+router.put('/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'customer') {
+        requirePermission('customers.update')(req, res, () => {});
+        if (res.headersSent) return;
+    }
 
-  try {
-    const result = CustomerService.deleteCustomer(
-      req.user.id,
-      Number(req.params.id)
-    );
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+    if (req.user.role === 'customer' && !isSelf(req)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
+        const result = await CustomerService.updateCustomer(
+            req.user.id,
+            Number(req.params.id),
+            req.body
+        );
+        res.json(result);
+    } catch (err) {
+        console.error(`Error updating customer ID ${req.params.id}:`, err);
+        res.status(400).json({ error: err.message });
+    }
+});
+
+router.delete('/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'customer') {
+        requirePermission('customers.update')(req, res, () => {});
+        if (res.headersSent) return;
+    }
+
+    if (req.user.role === 'customer') {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
+        const result = await CustomerService.deleteCustomer(
+            req.user.id,
+            Number(req.params.id)
+        );
+        res.json(result);
+    } catch (err) {
+        console.error(`Error deleting customer ID ${req.params.id}:`, err);
+        res.status(400).json({ error: err.message });
+    }
 });
 
 /* ======================================================
    Group Orders
 ====================================================== */
+router.get('/:id/group-orders', requireAuth, async (req, res) => {
+    if (req.user.role !== 'customer') {
+        requirePermission('customers.view')(req, res, () => {});
+        if (res.headersSent) return;
+    }
 
-router.get('/:id/group-orders', requireAuth, (req, res) => {
-  if (req.user.role !== 'customer') {
-    requirePermission('customers.view')(req, res, () => { });
-    if (res.headersSent) return;
-  }
+    if (req.user.role === 'customer' && !isSelf(req)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
 
-  if (req.user.role === 'customer' && !isSelf(req)) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-
-  const orders = CustomerService.getGroupOrdersByCustomer(
-    Number(req.params.id)
-  );
-  res.json({ count: orders.length, orders });
+    try {
+        const orders = await CustomerService.getGroupOrdersByCustomer(Number(req.params.id));
+        res.json({ count: orders.length, orders });
+    } catch (err) {
+        console.error(`Error fetching group orders for customer ID ${req.params.id}:`, err);
+        res.status(400).json({ error: err.message });
+    }
 });
 
-// GET group order by ID
 router.get(
-  '/group-orders/:orderId',
-  requireAuth,
-  requirePermission('customers.view'),
-  (req, res) => {
-    try {
-      const order = CustomerService.getGroupOrderById(
-        Number(req.params.orderId)
-      );
-      res.json(order);
-    } catch (err) {
-      res.status(404).json({ error: err.message });
+    '/group-orders/:orderId',
+    requireAuth,
+    requirePermission('customers.view'),
+    async (req, res) => {
+        try {
+            const order = await CustomerService.getGroupOrderById(Number(req.params.orderId));
+            res.json(order);
+        } catch (err) {
+            console.error(`Error fetching group order ID ${req.params.orderId}:`, err);
+            res.status(404).json({ error: err.message });
+        }
     }
-  }
 );
 
-// POST group order
 router.post(
-  '/group-orders',
-  requireAuth,
-  requirePermission('customers.create'),
-  (req, res) => {
-    try {
-      const result = CustomerService.createGroupOrder(req.user.id, req.body);
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
+    '/group-orders',
+    requireAuth,
+    requirePermission('customers.create'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.createGroupOrder(req.user.id, req.body);
+            res.status(201).json(result);
+        } catch (err) {
+            console.error("Error creating group order:", err);
+            res.status(400).json({ error: err.message });
+        }
     }
-  }
 );
 
-// PUT group order
 router.put(
-  '/group-orders/:orderId',
-  requireAuth,
-  requirePermission('customers.update'),
-  (req, res) => {
-    try {
-      const result = CustomerService.updateGroupOrder(
-        req.user.id,
-        Number(req.params.orderId),
-        req.body
-      );
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
+    '/group-orders/:orderId',
+    requireAuth,
+    requirePermission('customers.update'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.updateGroupOrder(
+                req.user.id,
+                Number(req.params.orderId),
+                req.body
+            );
+            res.json(result);
+        } catch (err) {
+            console.error(`Error updating group order ID ${req.params.orderId}:`, err);
+            res.status(400).json({ error: err.message });
+        }
     }
-  }
 );
 
-// DELETE group order
 router.delete(
-  '/group-orders/:orderId',
-  requireAuth,
-  requirePermission('customers.update'),
-  (req, res) => {
-    try {
-      const result = CustomerService.deleteGroupOrder(
-        req.user.id,
-        Number(req.params.orderId)
-      );
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
+    '/group-orders/:orderId',
+    requireAuth,
+    requirePermission('customers.update'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.deleteGroupOrder(
+                req.user.id,
+                Number(req.params.orderId)
+            );
+            res.json(result);
+        } catch (err) {
+            console.error(`Error deleting group order ID ${req.params.orderId}:`, err);
+            res.status(400).json({ error: err.message });
+        }
     }
-  }
 );
 
 /* ======================================================
    Group Members
 ====================================================== */
-
 router.get(
-  '/group-orders/:orderId/members',
-  requireAuth,
-  requirePermission('customers.view'),
-  (req, res) => {
-    const members = CustomerService.getGroupMembers(
-      Number(req.params.orderId)
-    );
-    res.json({ count: members.length, members });
-  }
+    '/group-orders/:orderId/members',
+    requireAuth,
+    requirePermission('customers.view'),
+    async (req, res) => {
+        try {
+            const members = await CustomerService.getGroupMembers(Number(req.params.orderId));
+            res.json({ count: members.length, members });
+        } catch (err) {
+            console.error(`Error fetching group members for order ID ${req.params.orderId}:`, err);
+            res.status(400).json({ error: err.message });
+        }
+    }
 );
 
 router.post(
-  '/group-orders/:orderId/members',
-  requireAuth,
-  requirePermission('customers.update'),
-  (req, res) => {
-    try {
-      const result = CustomerService.createGroupMember(req.user.id, {
-        ...req.body,
-        group_order_id: Number(req.params.orderId)
-      });
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
+    '/group-orders/:orderId/members',
+    requireAuth,
+    requirePermission('customers.update'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.createGroupMember(req.user.id, {
+                ...req.body,
+                group_order_id: Number(req.params.orderId)
+            });
+            res.status(201).json(result);
+        } catch (err) {
+            console.error(`Error creating group member for order ID ${req.params.orderId}:`, err);
+            res.status(400).json({ error: err.message });
+        }
     }
-  }
 );
 
 router.put(
-  '/group-members/:id',
-  requireAuth,
-  requirePermission('customers.update'),
-  (req, res) => {
-    try {
-      const result = CustomerService.updateGroupMember(
-        req.user.id,
-        Number(req.params.id),
-        req.body
-      );
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
+    '/group-members/:id',
+    requireAuth,
+    requirePermission('customers.update'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.updateGroupMember(
+                req.user.id,
+                Number(req.params.id),
+                req.body
+            );
+            res.json(result);
+        } catch (err) {
+            console.error(`Error updating group member ID ${req.params.id}:`, err);
+            res.status(400).json({ error: err.message });
+        }
     }
-  }
 );
 
 router.delete(
-  '/group-members/:id',
-  requireAuth,
-  requirePermission('customers.update'),
-  (req, res) => {
-    try {
-      const result = CustomerService.deleteGroupMember(
-        req.user.id,
-        Number(req.params.id)
-      );
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
+    '/group-members/:id',
+    requireAuth,
+    requirePermission('customers.update'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.deleteGroupMember(
+                req.user.id,
+                Number(req.params.id)
+            );
+            res.json(result);
+        } catch (err) {
+            console.error(`Error deleting group member ID ${req.params.id}:`, err);
+            res.status(400).json({ error: err.message });
+        }
     }
-  }
 );
 
 /* ======================================================
    Customer Measurements (后台 staff 管理客户量体记录)
 ====================================================== */
-
 router.get(
-  '/:id/measurements',
-  requireAuth,
-  requirePermission('customers.view'),
-  (req, res) => {
-    const customerId = Number(req.params.id);
-    const list = CustomerService.getMeasurementsForCustomer(customerId);
-    res.json({ count: list.length, measurements: list });
-  }
+    '/:id/measurements',
+    requireAuth,
+    requirePermission('customers.view'),
+    async (req, res) => {
+        try {
+            const customerId = Number(req.params.id);
+            const list = await CustomerService.getMeasurementsForCustomer(customerId);
+            res.json({ count: list.length, measurements: list });
+        } catch (err) {
+            console.error(`Error fetching measurements for customer ID ${req.params.id}:`, err);
+            res.status(400).json({ error: err.message });
+        }
+    }
 );
 
 router.post(
-  '/:id/measurements',
-  requireAuth,
-  requirePermission('customers.update'),
-  (req, res) => {
-    try {
-      const result = CustomerService.createMeasurementForCustomer(
-        req.user.id,
-        Number(req.params.id),
-        req.body
-      );
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
+    '/:id/measurements',
+    requireAuth,
+    requirePermission('customers.update'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.createMeasurementForCustomer(
+                req.user.id,
+                Number(req.params.id),
+                req.body
+            );
+            res.status(201).json(result);
+        } catch (err) {
+            console.error(`Error creating measurement for customer ID ${req.params.id}:`, err);
+            res.status(400).json({ error: err.message });
+        }
     }
-  }
 );
 
 export default router;
