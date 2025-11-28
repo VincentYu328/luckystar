@@ -1,84 +1,125 @@
-// frontend/src/routes/admin/customers/create/+page.server.js (再次修改)
-
+// frontend/src/routes/admin/customers/[id]/edit/+page.server.js
 import { api } from '$lib/server/api.js';
-import { redirect, error, fail } from '@sveltejs/kit';
-import { cleanForm } from '$lib/server/form-utils.js';
+import { error } from '@sveltejs/kit';
 
-export async function load({ locals }) {
-    const user = locals.authUser;
-    if (!user || user.type !== 'staff') {
-        throw error(403, 'Forbidden');
-    }
-    return {};
+export async function load({ params, locals, fetch, cookies }) {
+  const user = locals.authUser;
+  if (!user || user.type !== 'staff') {
+    throw error(403, 'Forbidden');
+  }
+
+  const id = Number(params.id);
+  if (isNaN(id)) {
+    throw error(400, 'Invalid customer id');
+  }
+
+  const customerRes = await api.customers.get(id, { fetch, cookies });
+  const customer = customerRes.customer ?? customerRes;
+
+  if (!customer) throw error(404, 'Customer not found');
+
+  return {
+    customer,
+    error: null,
+    success: false,
+    values: null
+  };
 }
 
 export const actions = {
-    default: async ({ locals, request }) => {
-        console.log("[ACTION /admin/customers/create] Action started."); // 新增日志
-        const user = locals.authUser;
-
-        if (!user || user.type !== 'staff') {
-            console.warn("[ACTION /admin/customers/create] Unauthorized access attempt."); // 新增日志
-            throw error(403, 'Forbidden');
-        }
-
-        const formData = await request.formData();
-        const rawPayload = Object.fromEntries(formData);
-        console.log("[ACTION /admin/customers/create] rawPayload:", rawPayload);
-
-        const payload = cleanForm(rawPayload);
-        console.log("[ACTION /admin/customers/create] cleaned payload:", payload);
-        console.log("[ACTION /admin/customers/create] password being sent (after cleanForm):", payload.password);
-
-        const password = payload.password;
-        const confirmPassword = payload.confirm_password;
-        
-        // 删除确认密码字段
-        delete payload.confirm_password; 
-        
-        console.log("[ACTION /admin/customers/create] payload to be sent to API (after deleting confirm_password):", payload); // 新增日志
-
-        // --- 密码验证 ---
-        if (!password || !confirmPassword || password !== confirmPassword) {
-            console.error("[ACTION /admin/customers/create] Password mismatch or empty."); // 新增日志
-            return fail(400, {
-                error: 'Passwords do not match or are empty',
-                values: rawPayload // 返回原始 payload 确保所有字段都回显
-            });
-        }
-        
-        // --- 必填字段验证 ---
-        if (!payload.full_name || !payload.phone || !payload.email) {
-            console.error("[ACTION /admin/customers/create] Missing required fields (full_name, phone, email)."); // 新增日志
-            return fail(400, {
-                error: 'Full name, phone, and email are required.',
-                values: rawPayload
-            });
-        }
-
-        try {
-            console.log("[ACTION /admin/customers/create] Attempting to call API: api.customers.create(payload)..."); // 新增日志
-            const res = await api.customers.create(payload);
-            console.log("[ACTION /admin/customers/create] API response received:", res); // 关键日志
-
-            // 检查 res 是否存在且是否有错误，或后端是否明确报告失败
-            if (!res || res.error || !res.success) { // 更严格的失败检查
-                console.error("[ACTION /admin/customers/create] API reported failure:", res?.error || 'Unknown API error'); // 新增日志
-                return fail(400, {
-                    error: res?.error || 'Failed to create customer.',
-                    values: rawPayload
-                });
-            }
-
-            console.log("[ACTION /admin/customers/create] Customer created successfully, redirecting."); // 新增日志
-            throw redirect(303, '/admin/customers?createSuccess=true');
-
-        } catch (err) {
-            console.error("[ACTION /admin/customers/create] Caught unexpected error during API call or processing:", err); // 关键日志
-            return fail(500, {
-                error: err.message || 'An unexpected error occurred during customer creation.',
-                values: rawPayload
-            });
-        }
+  default: async ({ params, request, locals, fetch, cookies }) => {
+    const user = locals.authUser;
+    if (!user || user.type !== 'staff') {
+      throw error(403, 'Forbidden');
     }
+
+    const id = Number(params.id);
+    const form = await request.formData();
+    const payload = Object.fromEntries(form);
+
+    console.log('[Edit Customer] Raw payload:', payload);
+
+    // 🔥 关键修复：确保所有字段类型正确，is_active 转为整数 0/1
+    const cleanPayload = {
+      full_name: String(payload.full_name || '').trim(),
+      phone: String(payload.phone || '').trim(),
+      email: String(payload.email || '').trim(),
+      address: payload.address && String(payload.address).trim() 
+        ? String(payload.address).trim() 
+        : null,
+      wechat: payload.wechat && String(payload.wechat).trim() 
+        ? String(payload.wechat).trim() 
+        : null,
+      whatsapp: payload.whatsapp && String(payload.whatsapp).trim() 
+        ? String(payload.whatsapp).trim() 
+        : null,
+      // 🔥 核心修复：直接发送整数 0 或 1，而不是布尔值
+      is_active: payload.is_active === '1' ? 1 : 0
+    };
+
+    console.log('[Edit Customer] Clean payload:', cleanPayload);
+
+    // 验证必填字段
+    if (!cleanPayload.full_name) {
+      return { 
+        success: false, 
+        error: 'Full name is required', 
+        values: payload,
+        customer: null
+      };
+    }
+
+    if (!cleanPayload.phone) {
+      return { 
+        success: false, 
+        error: 'Phone is required', 
+        values: payload,
+        customer: null
+      };
+    }
+
+    // 验证邮箱格式（如果提供）
+    if (cleanPayload.email && !cleanPayload.email.includes('@')) {
+      return { 
+        success: false, 
+        error: 'Invalid email format', 
+        values: payload,
+        customer: null
+      };
+    }
+
+    try {
+      const res = await api.customers.update(id, cleanPayload, { fetch, cookies });
+
+      console.log('[Edit Customer] API response:', res);
+
+      if (res.error) {
+        return { 
+          success: false, 
+          error: res.error, 
+          values: payload,
+          customer: null
+        };
+      }
+
+      // 重新获取更新后的客户数据
+      const updated = await api.customers.get(id, { fetch, cookies });
+
+      return {
+        success: true,
+        error: null,
+        values: cleanPayload,
+        customer: updated.customer ?? updated
+      };
+
+    } catch (err) {
+      console.error('[Edit Customer] Error:', err);
+      return { 
+        success: false, 
+        error: err.message || 'Failed to update customer', 
+        values: payload,
+        customer: null
+      };
+    }
+  }
 };

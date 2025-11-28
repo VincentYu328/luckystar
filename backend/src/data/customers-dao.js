@@ -62,6 +62,10 @@ class CustomersDAO {
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         `);
+        
+        // 🔥 确保 is_active 是整数
+        const isActive = data.is_active != null ? (data.is_active ? 1 : 0) : 1;
+        
         const result = stmt.run(
             data.full_name,
             data.phone,
@@ -71,13 +75,14 @@ class CustomersDAO {
             data.whatsapp || null,
             data.type || 'retail',
             data.password_hash || null,
-            data.is_active ?? 1
+            isActive
         );
         return result;
     }
 
     // =====================================================
     // 更新顾客信息（后台）
+    // 🔥 核心修复：处理布尔值转整数
     // =====================================================
     static updateCustomer(id, fields) {
         const allowed = [
@@ -89,7 +94,20 @@ class CustomersDAO {
         if (keys.length === 0) return;
 
         const setClause = keys.map(k => `${k} = ?`).join(', ');
-        const params = keys.map(k => fields[k]);
+        
+        // 🔥 关键修复：转换值，特别是 is_active
+        const params = keys.map(k => {
+            const value = fields[k];
+            
+            // 如果是 is_active 字段，转换布尔值为整数
+            if (k === 'is_active') {
+                return value != null ? (value ? 1 : 0) : 1;
+            }
+            
+            // 其他字段保持原样
+            return value;
+        });
+        
         params.push(id);
 
         return db.prepare(`
