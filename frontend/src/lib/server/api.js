@@ -3,6 +3,70 @@
 //  LuckyStar 全站通用 API 封装（2025）
 // ===============================
 
+async function requestWithContext(method, path, data = null, extraHeaders = {}, queryParams = {}, context = null) {
+    const fetchToUse = context?.fetch || globalFetch;
+    
+    if (!fetchToUse) {
+        throw new Error('API not initialized: 请在 hooks.server.js 中调用 initApi(event.fetch)');
+    }
+
+    let fullPath = path;
+    if (Object.keys(queryParams).length > 0) {
+        const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(queryParams)) {
+            if (value !== undefined && value !== null) {
+                params.append(key, String(value));
+            }
+        }
+        const qs = params.toString();
+        if (qs) fullPath += `?${qs}`;
+    }
+
+    const headers = {
+        'content-type': 'application/json',
+        ...extraHeaders,
+    };
+
+    // ⭐ 关键：如果有 context.cookies，添加到请求头
+    if (context?.cookies) {
+        const cookieHeader = context.cookies.getAll()
+            .map(c => `${c.name}=${c.value}`)
+            .join('; ');
+        if (cookieHeader) {
+            headers['cookie'] = cookieHeader;
+        }
+    }
+
+    const url = `${BASE_URL}${fullPath}`;
+
+    const res = await fetchToUse(url, {
+        method,
+        credentials: 'include',
+        headers,
+        body: data && method !== 'GET' ? JSON.stringify(data) : undefined,
+    });
+
+    if (res.status === 303 || res.status === 307 || res.redirected) {
+        return res;
+    }
+
+    let payload;
+    try {
+        payload = await res.json();
+    } catch {
+        payload = { error: 'Invalid JSON from backend' };
+    }
+
+    if (!res.ok) {
+        console.error(`API ${method} ${fullPath} ${res.status} failed:`, payload);
+        const message = payload.error || payload.message || `HTTP ${res.status}`;
+        throw new Error(message);
+    }
+
+    return payload;
+}
+
+
 import { PUBLIC_API_URL } from '$env/static/public';
 
 // 拼接完整的后端 API 地址
@@ -154,9 +218,20 @@ export const api = {
         profile() { return request('GET', '/customers/me/profile'); },
         orders() { return request('GET', '/customers/me/orders'); },
         order(id) { return request('GET', `/customers/me/orders/${id}`); },
-        measurements() { return request('GET', '/customers/me/measurements'); },
-        saveMeasurements(data) { return request('PUT', '/customers/me/measurements', data); },
+        
+        measurements(context = null) { 
+            return context 
+                ? requestWithContext('GET', '/customers/me/measurements', null, {}, {}, context)
+                : request('GET', '/customers/me/measurements'); 
+        },
+        
+        saveMeasurements(data, context = null) { 
+            return context
+                ? requestWithContext('PUT', '/customers/me/measurements', data, {}, {}, context)
+                : request('PUT', '/customers/me/measurements', data); 
+        },
     },
+
 
     // ---------------- CUSTOMERS ----------------
     customers: {

@@ -424,18 +424,6 @@ frontend/
 │   │   │   ├── +page.server.js
 │   │   │   └── +page.svelte
 │   │
-│   │   ├── checkout/
-│   │   │   ├── +page.server.js
-│   │   │   ├── +page.svelte
-│   │   │   ├── custom/
-│   │   │   │   ├── +page.server.js
-│   │   │   │   ├── +page.svelte
-│   │   │   │   └── measurement/
-│   │   │   │       ├── +page.server.js
-│   │   │   │       └── +page.svelte
-│   │   │   └── success/
-│   │   │       └── +page.svelte
-│   │
 │   │   ├── auth/
 │   │   │   ├── login/
 │   │   │   │   ├── +page.server.js
@@ -463,9 +451,12 @@ frontend/
 │   │   │   │       └── +page.svelte
 │   │   │
 │   │   │   ├── measurements/
-│   │   │   │   ├── +page.server.js
+│   │   │   │   ├── +layout.server.js
 │   │   │   │   └── +page.svelte
-│   │   │
+│   │   │   │       ├── edit/
+│   │   │   │       │   ├── +page.server.js
+│   │   │   │          └── +page.svelte
+│   │   │   │ 
 │   │   │   └── profile/
 │   │   │       ├── +page.server.js
 │   │   │       └── +page.svelte

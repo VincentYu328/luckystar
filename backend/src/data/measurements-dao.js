@@ -11,19 +11,18 @@ class MeasurementsDAO {
 
   static getAll() {
     return db.prepare(`
-    SELECT *
-    FROM measurements
-    ORDER BY measured_at DESC
-  `).all();
-  }
-
-  static getByCustomer(customerId) {
-    return db.prepare(`
-      SELECT *
-      FROM measurements
-      WHERE customer_id = ?
-      ORDER BY measured_at DESC
-    `).all(customerId);
+      SELECT 
+        m.*,
+        -- 拼接客户全名
+        (c.first_name || ' ' || c.last_name) as customer_name,
+        -- 获取性别
+        c.gender,
+        -- 将 measured_at 重命名为 updated_at 以匹配前端
+        m.measured_at as updated_at
+      FROM measurements m
+      LEFT JOIN customers c ON m.customer_id = c.id
+      ORDER BY m.measured_at DESC
+    `).all();
   }
 
   // 获取某团体成员的全部量体记录

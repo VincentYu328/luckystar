@@ -174,7 +174,20 @@ class CustomerService {
     // =====================================================
     static getMeasurementsForCustomer(id) {
         console.log(`[CustomerService] getMeasurementsForCustomer called for customer ID: ${id}`);
-        return MeasurementsDAO.getByCustomer(id);
+
+        // ✅ 修复：调用正确的方法
+        const measurements = CustomersDAO.getMyMeasurements(id);
+
+        // ✅ 补充缺失的字段
+        if (measurements && !measurements.hasOwnProperty('weight')) {
+            measurements.weight = null;
+        }
+        if (measurements && !measurements.hasOwnProperty('neck')) {
+            measurements.neck = null;
+        }
+
+        // ✅ Admin Dashboard 期望的是数组格式
+        return measurements ? [measurements] : [];
     }
 
     static async createMeasurementForCustomer(adminId, customerId, fields) {
@@ -204,20 +217,49 @@ class CustomerService {
     // Customer Portal: My Measurements
     // =====================================================
     static getMyMeasurements(customerId) {
-        console.log(`[CustomerService] getMyMeasurements called for customer ID: ${customerId}`);
-        return CustomersDAO.getMyMeasurements(customerId);
+        console.log(`🔍 [CustomerService] getMyMeasurements called for customer ID: ${customerId}`);
+
+        const data = CustomersDAO.getMyMeasurements(customerId);
+
+        console.log('📦 [CustomerService] DAO returned:', data);
+
+        // ✅ 如果 DAO 没有包含 weight 和 neck，手动补充为 null
+        if (data && !data.hasOwnProperty('weight')) {
+            data.weight = null;
+        }
+        if (data && !data.hasOwnProperty('neck')) {
+            data.neck = null;
+        }
+
+        return data;
     }
 
     static updateMyMeasurements(customerId, fields) {
-        console.log(`[CustomerService] updateMyMeasurements called for customer ID: ${customerId} with fields:`, fields);
+        console.log(`🔍 [CustomerService] updateMyMeasurements START`);
+        console.log(`👤 Customer ID: ${customerId}`);
+        console.log(`📦 Fields:`, fields);
 
         const existing = CustomersDAO.getMyMeasurements(customerId);
-        if (!existing) {
-            return CustomersDAO.createMyMeasurements(customerId, fields);
-        }
-        return CustomersDAO.updateMyMeasurements(customerId, fields);
-    }
+        console.log(`🔎 Existing measurements:`, existing);
 
+        // ✅ 过滤掉 weight 和 neck（因为 DAO 不支持）
+        const { weight, neck, ...allowedFields } = fields;
+
+        console.log('⚠️ [CustomerService] Filtered out unsupported fields (weight, neck)');
+        console.log('📦 [CustomerService] Allowed fields:', allowedFields);
+
+        if (!existing) {
+            console.log(`➕ No existing measurements, creating new...`);
+            const result = CustomersDAO.createMyMeasurements(customerId, allowedFields);
+            console.log(`✅ Create result:`, result);
+            return result;
+        }
+
+        console.log(`🔄 Updating existing measurements...`);
+        const result = CustomersDAO.updateMyMeasurements(customerId, allowedFields);
+        console.log(`✅ Update result:`, result);
+        return result;
+    }
     // =====================================================
     // Customer Portal: My Orders
     // =====================================================

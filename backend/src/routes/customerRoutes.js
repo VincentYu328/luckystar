@@ -73,8 +73,19 @@ router.put('/me/profile', requireCustomerAuth, async (req, res) => {
 // --- /me/measurements ---
 router.get('/me/measurements', requireCustomerAuth, async (req, res) => {
     try {
+        console.log('🔍 [Route] GET /me/measurements - Customer ID:', req.customer.id);
+        
         const m = await CustomerService.getMyMeasurements(req.customer.id);
-        res.json({ measurements: m });
+        
+        console.log('📦 [Route] Retrieved measurements:', m);
+        
+        // ✅ 直接返回对象（不包裹），如果没有就返回 null
+        if (!m) {
+            console.log('⚠️ [Route] No measurements found, returning null');
+            return res.json(null);
+        }
+        
+        res.json(m);  // 直接返回 { id: 1, height: 170, ... }
     } catch (err) {
         console.error("[Route GET /me/measurements] Error:", err);
         res.status(404).json({ error: err.message });
@@ -83,8 +94,17 @@ router.get('/me/measurements', requireCustomerAuth, async (req, res) => {
 
 router.put('/me/measurements', requireCustomerAuth, async (req, res) => {
     try {
-        await CustomerService.updateMyMeasurements(req.customer.id, req.body);
-        res.json({ success: true });
+        console.log('🔍 [Route] PUT /me/measurements - Customer ID:', req.customer.id);
+        console.log('📦 [Route] Received data:', req.body);
+        
+        const result = await CustomerService.updateMyMeasurements(req.customer.id, req.body);
+        
+        console.log('✅ [Route] Service returned:', result);
+        
+        // ✅ 返回更新后的数据，而不是 { success: true }
+        const updated = await CustomerService.getMyMeasurements(req.customer.id);
+        res.json(updated);
+        
     } catch (err) {
         console.error("[Route PUT /me/measurements] Error:", err);
         res.status(400).json({ error: err.message });
