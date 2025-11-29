@@ -87,5 +87,4 @@ export const actions = {
             throw redirect(303, `/admin/retail-orders?deleteError=${encodeURIComponent(err.message || 'Delete failed')}`);
         }
     }
-    // 您可以根据需要添加 updateStatus action，确保它也使用 303
 };

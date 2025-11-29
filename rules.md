@@ -343,3 +343,17 @@ return { success: true }; // 用户留在 POST 页
 
 
 这会导致你今天遇到的“数据不会自动更新”。
+
+
+
+
+
+
+
+
+=======================================
+
+以下是解决这个问题的完整路径总结，下次您遇到“点击链接后被静默重定向回列表页”的问题时，可以按照这个流程排查。🚀 故障排除总结：SvelteKit 动态路由静默重定向阶段一：定位问题 (静默重定向)现象： 点击管理面板的“查看”链接（例如 /admin/item/[id]）后，页面快速闪烁并立即返回到列表页 (/admin/item)。初步诊断：静默重定向 几乎总是意味着 SvelteKit 的 +page.server.js 文件中的 load 函数或 actions 函数执行了 throw redirect(...)。问题不在于链接本身，而在于 load 函数中的某个错误检查被触发。操作：将所有不必要的 redirect(303) 替换为 throw error(404, 'Specific reason for failure')。目的： 让错误可见，而不是被隐藏，从而知道是哪个检查失败了。阶段二：解决鉴权问题 (Admin 身份被拒)原始日志（后端终端）：[CustomerAuth] Access denied: Invalid token role.
+问题分析：身份不符： 管理员 (Admin) 带着 role: 'admin' 的 Token，却被 CustomerAuth 中间件拦截。代码原因： customerAuth.js 中有严格的 if (decoded.role !== 'customer') 检查。解决方案（可选其一）：✅ 最佳实践 (方案 A)： 确保 Admin 前端页面调用的 API 是 /api/admin/...，该路由使用 requireStaffAuth 中间件。快速修复 (方案 B)： 在 customerAuth.js 中添加白名单，允许 admin 和 staff 角色通过，但需注意在 req 中设置 req.customer = null，以避免后续控制器崩溃。阶段三：解决数据结构问题 (重定向的最终原因)症状： 修复鉴权后，问题依然存在，终端依然显示“Order not found”并重定向。操作：在 +page.server.js 的 load 函数中，API 调用成功后添加调试日志：JavaScriptconst orderRes = await api.retailOrders.get(orderId);
+console.log("[DEBUG API Response]", JSON.stringify(orderRes)); 
+分析日志（以您的实际情况为例）：期望检查结构 (前端假设)实际接收结构 (API 返回)结论orderRes.orderorderRes 就是订单对象本身结构不匹配！ 前端期望数据嵌套，实际数据是平铺的。最终修复：修正检查条件： 将依赖 order 属性的检查 (!orderRes?.order) 更改为检查 API 响应本身的关键字段 (!orderRes || !orderRes.id)。修正返回结构： 将返回给 Svelte 组件的数据结构从 order: orderRes.order 更改为 order: orderRes。错误代码修正后的代码`if (!orderResreturn { order: orderRes.order, ... }return { order: orderRes, items: orderRes.items, ... }通过这三个阶段（暴露错误 -> 解决身份验证 -> 修正数据结构假设），我们成功地解决了所有隐藏的问题，使详情页能够正常加载。

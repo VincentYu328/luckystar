@@ -1,17 +1,17 @@
 // backend/src/middleware/customerAuth.js
 // =====================================================
-// 前台客户鉴权中间件（与后台 staff 完全不同）
-// 修正：适配同步 DAO 调用
+// 前台客户鉴权中间件 (修改版：允许 Admin/Staff 角色“借道”通过)
 // =====================================================
 
 import CustomerAuthService from '../services/customerAuthService.js';
-// 导入所有 JWT 校验的函数 (虽然 Service 中已封装，但为了清晰保留)
-import * as jwtUtil from '../utils/jwt.js'; 
-
 
 /**
  * [Middleware] Requires a valid Customer JWT token.
- * @returns 401 Unauthorized if token is missing, invalid, or customer is inactive.
+ * * 修改逻辑：
+ * 1. 检查 Token 是否存在。
+ * 2. 如果角色是 'admin'/'staff'/'manager' -> 直接放行 (req.customer = null)。
+ * 3. 如果角色是 'customer' -> 严格验证客户状态 (req.customer = {...})。
+ * 4. 其他情况 -> 报错 401。
  */
 export async function requireCustomerAuth(req, res, next) {
     const token = req.cookies?.access_token;
@@ -22,18 +22,36 @@ export async function requireCustomerAuth(req, res, next) {
     }
 
     try {
-        // 1. 验证 Token (同步操作)
+        // 1. 验证 Token (同步/异步取决于 Service 实现，此处假设同步返回 decoded)
         const decoded = CustomerAuthService.verifyAccess(token);
-        console.log('[customerAuth] token payload:', decoded);
+        
+        // ============================================================
+        // ⭐ 新增逻辑：允许 Admin/Staff 角色通过
+        // ============================================================
+        // 定义哪些非客户角色可以访问此接口
+        const validStaffRoles = ['admin', 'staff', 'manager', 'superadmin']; 
 
-        // Check if the token payload is for a customer
+        if (decoded.role && validStaffRoles.includes(decoded.role)) {
+            console.log(`[CustomerAuth] 🛡️ Admin/Staff Override: Role '${decoded.role}' allowed access.`);
+            
+            // 将 Token 信息注入 req.user，以便后续权限检查 (ACL) 使用
+            req.user = decoded; 
+            
+            // ⚠️ 关键点：管理员不是客户，所以 req.customer 为空。
+            // 确保后续 Controller 不要强行读取 req.customer.id
+            req.customer = null; 
+            
+            return next(); 
+        }
+        // ============================================================
+
+        // 2. 严格检查：如果不是 Staff，那必须是 Customer
         if (decoded.role !== 'customer') {
-            console.log('[CustomerAuth] Access denied: Invalid token role.');
+            console.log(`[CustomerAuth] Access denied: Role '${decoded.role}' is not a customer.`);
             return res.status(401).json({ error: 'Unauthorized: Token role mismatch.' });
         }
 
-        // 2. 获取客户数据 (同步操作 - 适配同步 DAO)
-        // ⭐ FIX: 移除 await，因为 Service/DAO 是同步的
+        // 3. 获取并验证客户数据
         const customer = CustomerAuthService.getCustomerByCustomerId(decoded.customerId); 
         
         if (!customer || !customer.is_active) {
@@ -41,7 +59,7 @@ export async function requireCustomerAuth(req, res, next) {
             return res.status(401).json({ error: 'Unauthorized: Customer not found or inactive.' });
         }
 
-        // 3. 附加客户数据
+        // 4. 注入客户数据
         req.customer = {
             id: customer.id,
             full_name: customer.full_name,
@@ -49,7 +67,7 @@ export async function requireCustomerAuth(req, res, next) {
             phone: customer.phone
         };
         
-        // 附加 req.user 以兼容依赖 req.user 的下游路由，例如 requireAuth 中的 isSelf()
+        // 兼容性注入 req.user
         req.user = { 
             id: customer.id, 
             role: 'customer', 
@@ -57,9 +75,10 @@ export async function requireCustomerAuth(req, res, next) {
         };
 
         next();
+
     } catch (err) {
         console.error('[CustomerAuth] Token verification failed:', err.message);
-        // 清除 Token 以强制重新登录
+        // 清除无效 Token
         res.clearCookie('access_token');
         res.clearCookie('refresh_token');
         return res.status(401).json({ error: 'Unauthorized: Invalid or expired token.' });
@@ -68,7 +87,7 @@ export async function requireCustomerAuth(req, res, next) {
 
 /**
  * [Middleware] Verifies a Customer JWT token if present, but does not enforce it.
- * (This middleware is not currently used in the provided customerRoutes.js but is kept for completeness)
+ * (Optional use)
  */
 export function verifyCustomerAuth(req, res, next) {
     const token = req.cookies?.access_token;
@@ -78,13 +97,17 @@ export function verifyCustomerAuth(req, res, next) {
     }
 
     try {
-        // Synchronous verification
         const decoded = CustomerAuthService.verifyAccess(token);
         
+        // 同样允许 Staff 即使在这里也被解析
+        const validStaffRoles = ['admin', 'staff', 'manager', 'superadmin'];
+        if (decoded.role && validStaffRoles.includes(decoded.role)) {
+            req.user = decoded;
+            return next();
+        }
+
         if (decoded.role === 'customer') {
-            // Synchronous DAO call
             const customer = CustomerAuthService.getCustomerByCustomerId(decoded.customerId);
-            
             if (customer && customer.is_active !== 0) {
                 req.customer = customer;
                 req.user = { id: customer.id, role: 'customer', customerId: customer.id };
@@ -92,7 +115,7 @@ export function verifyCustomerAuth(req, res, next) {
         }
         next();
     } catch (error) {
-        // Soft failure: clear cookies and continue
+        // Soft failure
         res.clearCookie('access_token');
         res.clearCookie('refresh_token');
         next();
