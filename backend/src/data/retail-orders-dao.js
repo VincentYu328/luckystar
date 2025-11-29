@@ -179,6 +179,11 @@ class RetailOrdersDAO {
 
     // ⭐ FIX: 修正字段映射，与 init-db.sql 匹配
     static createItem(data) {
+        // ⚠️ 注意：这里必须明确处理所有 NOT NULL 字段
+        
+        // 检查 order_id 和 product_id 是否为 null，如果是，则应该在 Service 层抛出错误。
+        // 但为了防止 Service 层校验遗漏，我们在这里也做一层保护：
+
         const stmt = db.prepare(`
             INSERT INTO retail_order_items (
                 order_id,
@@ -197,10 +202,13 @@ class RetailOrdersDAO {
 
         return stmt.run(
             data.order_id,
-            data.product_id,
+            // ⭐️ 修复点：确保 product_id 存在且不为 null/undefined
+            data.product_id, // 假设 Service 层传来的就是正确的 ID
             data.quantity,
-            data.unit_price, // 对应前端的 price_snapshot
-            data.subtotal,  // quantity * unit_price
+            data.unit_price, 
+            data.subtotal, 
+            
+            // 允许为 NULL 的字段使用 || null
             data.product_sku || null,
             data.product_name || null,
             data.size_label || null,

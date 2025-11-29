@@ -22,12 +22,30 @@
 
         <div class="text-gray-700">
             <span class="font-medium">Status:</span>
-            <span class="text-blue-700 font-semibold">{order.status || 'N/A'}</span>
+            <!-- Display status with dynamic styling -->
+            <span class="font-semibold" class:text-yellow-700={order.status === 'pending'} 
+                                        class:text-green-700={order.status === 'confirmed' || order.status === 'completed'}
+                                        class:text-red-700={order.status === 'cancelled'}>
+                {order.status || 'N/A'}
+            </span>
         </div>
 
+        <!-- Dynamic Status Message based on current order state -->
         {#if order.status === 'pending'}
-            <div class="text-yellow-700 font-medium">
-                Your order request has been received. We will contact you soon.
+            <div class="text-yellow-700 font-medium pt-2">
+                Your order request has been received. We will review and confirm the status soon.
+            </div>
+        {:else if order.status === 'confirmed'}
+            <div class="text-green-700 font-medium pt-2">
+                This order has been **CONFIRMED** by our staff and is now being processed. Please proceed with payment if a deposit is due.
+            </div>
+        {:else if order.status === 'completed'}
+            <div class="text-green-700 font-medium pt-2">
+                This order is **COMPLETED**. Thank you for your business!
+            </div>
+        {:else if order.status === 'cancelled'}
+            <div class="text-red-700 font-medium pt-2">
+                This order has been **CANCELLED**.
             </div>
         {/if}
     </div>
@@ -41,16 +59,16 @@
 
                 <div>
                     <div class="font-medium text-lg">
+                        <!-- Use product_name or name_snapshot from the item table -->
                         {item.product_name || item.name_snapshot}
                     </div>
                     <div class="text-gray-600 text-sm">
-                        <!-- ⭐ FIX: Use backend field names: quantity and unit_price -->
-                        Qty: {item.quantity} × ${item.unit_price}
+                        Qty: {item.quantity} × ${item.unit_price?.toFixed(2) || '0.00'}
                     </div>
                 </div>
 
                 <div class="text-right font-semibold">
-                    <!-- ⭐ FIX: Use backend field names: subtotal -->
+                    <!-- Calculate or use subtotal from item table -->
                     ${(item.subtotal || item.quantity * item.unit_price).toFixed(2)}
                 </div>
             </div>

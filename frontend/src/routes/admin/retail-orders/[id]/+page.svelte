@@ -1,152 +1,255 @@
+<!-- frontend\src\routes\admin\retail-orders\[id]\+page.svelte -->
+
 <script>
+    import { enhance } from '$app/forms';
+    // 移除 import { goto } from '$app/navigation';，因为 enhance 会处理重定向
+    
     export let data;
+    
+    // Rule 4: Defensive check
+    const products = data.products ?? []; 
+    
+    let items = [{ product_id: '', qty: 1, unit_price: null }];
+    let customer_name = '';
+    let customer_phone = '';
+    let notes = '';
+    let formError = '';
+    let formMessage = '';
+    let submitting = false;
 
-    const order = data.order;
-    const items = data.items;
-    const payments = data.payments;
+    // --- Helper Functions ---
+    
+    function addItem() {
+        items = [...items, { product_id: '', qty: 1, unit_price: null }];
+        formError = '';
+    }
 
-    const STATUS_LABEL = {
-        pending: "Pending（待处理）",
-        confirmed: "Confirmed（已确认）",
-        completed: "Completed（已完成）",
-        cancelled: "Cancelled（已取消）"
-    };
+    function removeItem(i) {
+        items = items.filter((_, idx) => idx !== i);
+        formError = '';
+    }
+
+    // --- Price Lookup Helper ---
+    function getProductPrice(productId) {
+        const product = products.find(p => p.id === Number(productId));
+        return product ? product.base_price : 0;
+    }
 </script>
 
-<div class="space-y-10">
+<div class="space-y-8 max-w-3xl p-4">
 
     <h1 class="text-3xl font-semibold tracking-tight">
-        Retail Order #{order.id}（零售订单）
+        Create Retail Order (Staff Entry)
     </h1>
 
-    <!-- ========= Order Info 订单信息 ========= -->
-    <section class="bg-white border rounded-lg p-6 space-y-3">
-        <h2 class="text-xl font-semibold">
-            Order Info（订单信息）
-        </h2>
-
-        <div class="text-gray-700 space-y-1">
-            <p>
-                <strong>Status（状态）:</strong>
-                {STATUS_LABEL[order.status]}
-            </p>
-
-            <p>
-                <strong>Created At（创建时间）:</strong>
-                {new Date(order.created_at).toLocaleString()}
-            </p>
-
-            {#if order.customer_name}
-                <p>
-                    <strong>Customer（顾客）:</strong> {order.customer_name}
-                </p>
-            {/if}
-
-            {#if order.customer_phone}
-                <p>
-                    <strong>Phone（电话）:</strong> {order.customer_phone}
-                </p>
-            {/if}
-
-            {#if order.notes}
-                <p>
-                    <strong>Notes（备注）:</strong> {order.notes}
-                </p>
-            {/if}
+    {#if formError}
+        <div class="p-4 rounded-lg bg-red-100 text-red-800 border border-red-300">
+            ❌ Error: {formError}
         </div>
-    </section>
-
-    <!-- ========= Items 商品列表 ========= -->
-    <section class="bg-white border rounded-lg p-6 space-y-3">
-        <h2 class="text-xl font-semibold">
-            Items（商品列表）
-        </h2>
-
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-gray-50 border-b">
-                    <tr>
-                        <th class="p-3">SKU</th>
-                        <th class="p-3">Product（商品）</th>
-                        <th class="p-3">Qty（数量）</th>
-                        <th class="p-3">Unit Price（单价）</th>
-                        <th class="p-3">Subtotal（小计）</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {#each items as it}
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="p-3">{it.sku}</td>
-                            <td class="p-3">{it.name}</td>
-                            <td class="p-3">{it.qty}</td>
-                            <td class="p-3">${it.unit_price}</td>
-                            <td class="p-3 font-semibold">
-                                ${ (it.qty * it.unit_price).toFixed(2) }
-                            </td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
+    {/if}
+    
+    {#if formMessage}
+        <div class="p-4 rounded-lg bg-green-100 text-green-800 border border-green-300">
+            ✅ {formMessage}
         </div>
-    </section>
+    {/if}
 
-    <!-- ========= Payments 支付信息 ========= -->
-    <section class="bg-white border rounded-lg p-6 space-y-3">
-        <h2 class="text-xl font-semibold">
-            Payments（支付记录）
-        </h2>
+    <form 
+        method="POST" 
+        action="?/create" 
+        use:enhance={({ data, cancel }) => {
+            
+            // --- 1. 客户端校验 (Pre-Submit Validation) ---
+            formError = '';
+            submitting = true;
 
-        {#if payments.length === 0}
-            <p class="text-gray-500">
-                No payments recorded（尚无支付记录）
-            </p>
-        {:else}
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-gray-50 border-b">
-                        <tr>
-                            <th class="p-3">Date（日期）</th>
-                            <th class="p-3">Amount（金額）</th>
-                            <th class="p-3">Method（方式）</th>
-                            <th class="p-3">Reference（参考号）</th>
-                        </tr>
-                    </thead>
+            if (!customer_name || !customer_phone || items.length === 0) {
+                formError = 'Customer name, phone, and at least one item are required.';
+                submitting = false;
+                cancel(); // 取消提交
+                return;
+            }
 
-                    <tbody>
-                        {#each payments as p}
-                            <tr class="border-b hover:bg-gray-50">
-                                <td class="p-3">{new Date(p.created_at).toLocaleString()}</td>
-                                <td class="p-3">${p.amount}</td>
-                                <td class="p-3">{p.method}</td>
-                                <td class="p-3">{p.reference || '—'}</td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
+            // --- 2. 计算并构造 Items Payload ---
+            let total_amount = 0;
+            const itemsPayload = [];
+            
+            for (const item of items) {
+                const product = products.find(p => p.id === Number(item.product_id));
+                
+                if (!product) {
+                    formError = `Error: Please select a product for all items.`;
+                    submitting = false;
+                    cancel();
+                    return;
+                }
+                
+                // 获取价格 (手动覆盖价格 > 基础价格)
+                const unitPrice = item.unit_price !== null && item.unit_price !== '' ? Number(item.unit_price) : product.base_price;
+                const quantity = Number(item.qty);
+
+                if (quantity <= 0 || isNaN(quantity)) {
+                    formError = `Error: Quantity for ${product.name} must be positive.`;
+                    submitting = false;
+                    cancel();
+                    return;
+                }
+
+                total_amount += unitPrice * quantity;
+                
+                itemsPayload.push({
+                    product_id: product.id,
+                    name: product.name,
+                    price_snapshot: unitPrice, 
+                    quantity: quantity,
+                });
+            }
+
+            // --- 3. 构造最终 Payload JSON ---
+            const finalPayload = {
+                customer_name,
+                customer_phone,
+                notes,
+                items: itemsPayload,
+                total_amount: total_amount, 
+            };
+
+            // 4. 将 JSON 字符串注入到 FormData 中，传递给 Action
+            data.set('payload', JSON.stringify(finalPayload));
+            
+            // --- 提交后处理 (Post-Submit Handling) ---
+            return ({ update, result }) => {
+                submitting = false;
+
+                if (result.type === 'failure') {
+                    // Action 返回 failure 对象 (通常是服务器校验失败)
+                    formError = result.data.message || 'Order creation failed.';
+                } else if (result.type === 'redirect') {
+                    // Action 抛出 throw redirect(303, ...)，enhance 自动处理跳转
+                    formMessage = 'Order created successfully. Redirecting...';
+                    // SvelteKit 会自动执行跳转
+                } else {
+                    formError = 'An unexpected submission error occurred.';
+                }
+                
+                update(); // 强制更新页面状态（如错误信息）
+            }
+        }}
+    >
+
+        <div class="space-y-10">
+
+            <div class="space-y-3 p-4 border rounded-lg bg-gray-50">
+                <h2 class="text-xl font-medium">
+                    Customer Info
+                </h2>
+                
+                <input
+                    bind:value={customer_name}
+                    placeholder="Customer Name (Required)"
+                    class="border rounded p-2 w-full"
+                    name="customer_name_phantom" 
+                />
+
+                <input
+                    bind:value={customer_phone}
+                    placeholder="Phone Number (Required)"
+                    class="border rounded p-2 w-full"
+                    name="customer_phone_phantom"
+                />
             </div>
-        {/if}
-    </section>
 
-    <!-- ========= Actions 操作 ========= -->
-    <section class="space-x-4">
+            <div class="space-y-5">
+                <h2 class="text-xl font-medium">
+                    Order Items
+                </h2>
 
-        <a
-            href={`/admin/retail-orders/${order.id}/review`}
-            class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-            Review Order（审核订单）
-        </a>
+                {#each items as item, i}
+                    <div class="border rounded-lg p-4 bg-white space-y-3">
+                        
+                        <div class="text-sm text-gray-700">Item #{i + 1}</div>
 
-        {#if order.status !== 'completed'}
-            <a
-                href={`/admin/retail-orders/${order.id}/complete`}
-                class="px-5 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        <select
+                            bind:value={item.product_id}
+                            class="border rounded p-2 w-full"
+                            required
+                            name="product_id_{i}_phantom"
+                        >
+                            <option value="">
+                                Select Product...
+                            </option>
+                            {#each products as p}
+                                <option value={p.id}>
+                                    {p.sku} — {p.name} (${p.base_price.toFixed(2)})
+                                </option>
+                            {/each}
+                        </select>
+                        
+                        {#if item.product_id}
+                            <div class="text-xs text-gray-500 pl-1">Base Price: ${getProductPrice(item.product_id).toFixed(2)}</div>
+                        {/if}
+
+                        <div class="flex gap-3">
+                            <input
+                                type="number"
+                                min="1"
+                                bind:value={item.qty}
+                                class="border rounded p-2 w-1/3"
+                                placeholder="Qty"
+                                required
+                                name="qty_{i}_phantom"
+                            />
+                            <input
+                                type="number"
+                                step="0.01"
+                                bind:value={item.unit_price}
+                                class="border rounded p-2 w-2/3"
+                                placeholder="Unit Price Override (Optional)"
+                                name="price_{i}_phantom"
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            on:click={() => removeItem(i)}
+                            class="text-red-600 text-sm hover:underline"
+                        >
+                            Remove Item
+                        </button>
+                    </div>
+                {/each}
+
+                <button
+                    type="button"
+                    on:click={addItem}
+                    class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 font-medium"
+                >
+                    + Add Item
+                </button>
+            </div>
+
+            <div>
+                <label class="block mb-1 font-medium">
+                    Notes (Optional)
+                </label>
+                <textarea
+                    bind:value={notes}
+                    class="border rounded p-2 w-full"
+                    rows="3"
+                    placeholder="Internal notes about the order."
+                    name="notes_phantom"
+                ></textarea>
+            </div>
+
+            <button
+                type="submit"
+                disabled={submitting}
+                class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition w-full"
             >
-                Mark as Complete（标记为完成）
-            </a>
-        {/if}
+                {submitting ? 'Creating Order...' : 'Create Order'}
+            </button>
 
-    </section>
+        </div>
 
+    </form>
 </div>

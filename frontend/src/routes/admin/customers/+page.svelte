@@ -1,3 +1,5 @@
+<!-- frontend\src\routes\admin\customers\+page.svelte -->
+
 <script>
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
