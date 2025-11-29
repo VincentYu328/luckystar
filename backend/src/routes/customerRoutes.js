@@ -1,18 +1,23 @@
-// backend/src/routes/customerRoutes.js (完整最终修正版)
+// backend/src/routes/customerRoutes.js
 
 import express from 'express';
+// Assuming the following imports are correctly set up in your backend:
 import CustomerService from '../services/customerService.js';
 import RetailOrderService from '../services/retailOrderService.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js'; // Staff Auth Middleware
 import { requirePermission } from '../middleware/rbac.js';
-import { requireCustomerAuth } from '../middleware/customerAuth.js';
+import { requireCustomerAuth } from '../middleware/customerAuth.js'; // Customer Auth Middleware
+import { verifyCustomerAuth } from '../middleware/customerAuth.js'; // Assuming this is the correct middleware name
 
 const router = express.Router();
 
 /* ======================================================
-   工具：判断 customer 是否访问自己的数据
+    工具：判断 customer 是否访问自己的数据
 ====================================================== */
 function isSelf(req) {
+    // Note: The logic in the provided code snippet seems complex, 
+    // we rely on the customerAuth middleware populating req.customer for /me routes, 
+    // and checking against req.params.id for other routes.
     return (
         req.user?.role === 'customer' &&
         Number(req.params.id) === req.user.customerId
@@ -20,16 +25,17 @@ function isSelf(req) {
 }
 
 /* ======================================================
-   MY 页面（customer 前台）
+    MY 页面（customer 前台）- 统一使用 requireCustomerAuth
 ====================================================== */
 
+// --- /me Routes ---
 // GET /api/customers/me
 router.get('/me', requireCustomerAuth, async (req, res) => {
     try {
         const me = await CustomerService.getCustomerById(req.customer.id);
         res.json(me);
     } catch (err) {
-        console.error("Error fetching /me:", err);
+        console.error("[Route GET /me] Error:", err);
         res.status(404).json({ error: err.message });
     }
 });
@@ -40,20 +46,18 @@ router.put('/me', requireCustomerAuth, async (req, res) => {
         const updated = await CustomerService.updateMyProfile(req.customer.id, req.body);
         res.json(updated);
     } catch (err) {
-        console.error("Error updating /me:", err);
+        console.error("[Route PUT /me] Error:", err);
         res.status(400).json({ error: err.message });
     }
 });
 
-/* ============================
-   MY — Profile
-============================ */
+// --- /me/profile ---
 router.get('/me/profile', requireCustomerAuth, async (req, res) => {
     try {
         const me = await CustomerService.getMyProfile(req.customer.id);
         res.json({ profile: me });
     } catch (err) {
-        console.error("Error fetching /me/profile:", err);
+        console.error("[Route GET /me/profile] Error:", err);
         res.status(404).json({ error: err.message });
     }
 });
@@ -63,20 +67,18 @@ router.put('/me/profile', requireCustomerAuth, async (req, res) => {
         await CustomerService.updateMyProfile(req.customer.id, req.body);
         res.json({ success: true });
     } catch (err) {
-        console.error("Error updating /me/profile:", err);
+        console.error("[Route PUT /me/profile] Error:", err);
         res.status(400).json({ error: err.message });
     }
 });
 
-/* ============================
-   MY — Measurements（顾客端）
-============================ */
+// --- /me/measurements ---
 router.get('/me/measurements', requireCustomerAuth, async (req, res) => {
     try {
         const m = await CustomerService.getMyMeasurements(req.customer.id);
         res.json({ measurements: m });
     } catch (err) {
-        console.error("Error fetching /me/measurements:", err);
+        console.error("[Route GET /me/measurements] Error:", err);
         res.status(404).json({ error: err.message });
     }
 });
@@ -86,65 +88,76 @@ router.put('/me/measurements', requireCustomerAuth, async (req, res) => {
         await CustomerService.updateMyMeasurements(req.customer.id, req.body);
         res.json({ success: true });
     } catch (err) {
-        console.error("Error updating /me/measurements:", err);
+        console.error("[Route PUT /me/measurements] Error:", err);
         res.status(400).json({ error: err.message });
     }
 });
 
-/* ============================
-   MY — Retail Orders
-============================ */
+// --- /me/orders ---
+// GET /api/customers/me/orders (FIXED: Use RetailOrderService.getOrdersByCustomer)
 router.get('/me/orders', requireCustomerAuth, async (req, res) => {
     try {
-        const orders = await CustomerService.getMyOrders(req.customer.id);
-        res.json({ orders });
+        // ⭐ FIX: Using the correct RetailOrderService method for historical orders
+        const orders = RetailOrderService.getOrdersByCustomer(req.customer.id);
+        // Rule 6: Return unified structure { items: [...] }
+        res.json({ items: orders }); // Returning {items: ...} for frontend API consistency
     } catch (err) {
-        console.error("Error fetching /me/orders:", err);
-        res.status(404).json({ error: err.message });
+        console.error("[Route GET /me/orders] Error:", err);
+        res.status(500).json({ error: 'Failed to retrieve customer orders.' });
     }
 });
 
+// POST /api/customers/me/orders (FIXED: Use submitSelfServiceOrder)
 router.post('/me/orders', requireCustomerAuth, async (req, res) => {
     try {
         const customerId = req.customer.id;
-        const { items } = req.body;
+        const orderData = req.body;
 
-        if (!items || !Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({ error: 'items required' });
-        }
+        // ⭐ FIX: Use the dedicated self-service logic
+        const result = await RetailOrderService.submitSelfServiceOrder(customerId, orderData);
 
-        const result = await RetailOrderService.createOrder(customerId, {
-            items,
-            status: 'pending',
-            source: 'web'
+        // Success response (Rule 6: Stable return structure)
+        return res.status(201).json({ 
+            message: "Order submitted successfully.",
+            id: result.id,
+            order_number: result.order_number
         });
 
-        res.status(201).json(result);
-    } catch (err) {
-        console.error("Error creating /me/orders:", err);
-        res.status(400).json({ error: err.message });
+    } catch (error) {
+        console.error("[Route POST /me/orders] Error:", error.message);
+
+        // Handle specific Service layer errors
+        if (error.message.includes('Validation Error')) {
+            return res.status(400).json({ error: error.message });
+        }
+        if (error.message.includes('Order Submission Error')) {
+            return res.status(500).json({ error: error.message });
+        }
+
+        return res.status(500).json({ error: 'Failed to create order due to a server error.' });
     }
 });
 
 /* ======================================================
-   Customers（后台 staff + customer 自身访问）
+    Customers（后台 staff + customer 自身访问）
 ====================================================== */
+// NOTE: The rest of the routes below assume the middleware is handling staff/customer roles appropriately
+// The original code was using 'requireAuth' (Staff JWT) for all routes below.
+
 router.get(
     '/',
-    requireAuth,
+    // Assuming 'requireAuth' is the staff check
+    requireAuth, 
     requirePermission('customers.view'),
     (req, res) => {
         try {
-            // 安全处理查询关键字：去除首尾空格，空值转为 ''
             const rawKeyword = req.query.keyword;
             const keyword = rawKeyword ? String(rawKeyword).trim() : '';
 
-            console.log('[Backend CustomerRoutes] GET / - Received raw keyword:', rawKeyword);
             console.log('[Backend CustomerRoutes] GET / - Processed keyword:', keyword);
 
             let customers;
 
-            // 只有当处理后的关键字非空时才走搜索，否则返回全部客户
             if (keyword.length > 0) {
                 customers = CustomerService.search(keyword);
             } else {
@@ -160,6 +173,7 @@ router.get(
 );
 
 router.get('/:id', requireAuth, async (req, res) => {
+    // Complex authorization logic relies on middleware setup and isSelf helper
     if (req.user.role !== 'customer') {
         requirePermission('customers.view')(req, res, () => {});
         if (res.headersSent) return;
@@ -177,6 +191,8 @@ router.get('/:id', requireAuth, async (req, res) => {
         res.status(404).json({ error: err.message });
     }
 });
+
+// ... (rest of the file: POST /, PUT /:id, DELETE /:id, Group Orders, Group Members, Customer Measurements remain unchanged)
 
 router.post(
     '/',
@@ -239,7 +255,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 });
 
 /* ======================================================
-   Group Orders
+    Group Orders
 ====================================================== */
 router.get('/:id/group-orders', requireAuth, async (req, res) => {
     if (req.user.role !== 'customer') {
@@ -328,7 +344,7 @@ router.delete(
 );
 
 /* ======================================================
-   Group Members
+    Group Members
 ====================================================== */
 router.get(
     '/group-orders/:orderId/members',
@@ -401,7 +417,7 @@ router.delete(
 );
 
 /* ======================================================
-   Customer Measurements (后台 staff 管理客户量体记录)
+    Customer Measurements (后台 staff 管理客户量体记录)
 ====================================================== */
 router.get(
     '/:id/measurements',

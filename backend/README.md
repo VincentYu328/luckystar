@@ -665,6 +665,7 @@ frontend/
 │   │   │   ├── cart.js
 │   │   │   ├── notifications.js
 │   │   │   └── ui.js
+│   │   │   └── checkout-store.js
 │   │
 │   │   ├── utils/
 │   │   │   ├── format.js
