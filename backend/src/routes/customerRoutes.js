@@ -23,13 +23,11 @@ function isSelf(req) {
         Number(req.params.id) === req.user.customerId
     );
 }
-
 /* ======================================================
-    MY 页面（customer 前台）- 统一使用 requireCustomerAuth
+    MY 页面（customer 前台）- /me/* 路径
 ====================================================== */
 
-// --- /me Routes ---
-// GET /api/customers/me
+// --- /me Routes --- (GET /api/customers/me)
 router.get('/me', requireCustomerAuth, async (req, res) => {
     try {
         const me = await CustomerService.getCustomerById(req.customer.id);
@@ -94,29 +92,27 @@ router.put('/me/measurements', requireCustomerAuth, async (req, res) => {
 });
 
 // --- /me/orders ---
-// GET /api/customers/me/orders (FIXED: Use RetailOrderService.getOrdersByCustomer)
+
+// GET /api/customers/me/orders (List all orders)
 router.get('/me/orders', requireCustomerAuth, async (req, res) => {
     try {
-        // ⭐ FIX: Using the correct RetailOrderService method for historical orders
         const orders = RetailOrderService.getOrdersByCustomer(req.customer.id);
         // Rule 6: Return unified structure { items: [...] }
-        res.json({ items: orders }); // Returning {items: ...} for frontend API consistency
+        res.json({ items: orders });
     } catch (err) {
         console.error("[Route GET /me/orders] Error:", err);
         res.status(500).json({ error: 'Failed to retrieve customer orders.' });
     }
 });
 
-// POST /api/customers/me/orders (FIXED: Use submitSelfServiceOrder)
+// POST /api/customers/me/orders (Submit new order)
 router.post('/me/orders', requireCustomerAuth, async (req, res) => {
     try {
         const customerId = req.customer.id;
         const orderData = req.body;
 
-        // ⭐ FIX: Use the dedicated self-service logic
         const result = await RetailOrderService.submitSelfServiceOrder(customerId, orderData);
 
-        // Success response (Rule 6: Stable return structure)
         return res.status(201).json({ 
             message: "Order submitted successfully.",
             id: result.id,
@@ -126,7 +122,6 @@ router.post('/me/orders', requireCustomerAuth, async (req, res) => {
     } catch (error) {
         console.error("[Route POST /me/orders] Error:", error.message);
 
-        // Handle specific Service layer errors
         if (error.message.includes('Validation Error')) {
             return res.status(400).json({ error: error.message });
         }
@@ -137,6 +132,38 @@ router.post('/me/orders', requireCustomerAuth, async (req, res) => {
         return res.status(500).json({ error: 'Failed to create order due to a server error.' });
     }
 });
+
+// ⭐ MISSING ROUTE ADDED: GET /api/customers/me/orders/:id (Retrieve Single Order)
+router.get('/me/orders/:id', requireCustomerAuth, async (req, res) => {
+    const customerId = req.customer.id;
+    const orderId = Number(req.params.id);
+
+    try {
+        // 1. 获取订单及订单项。RetailOrderService.getOrderById 返回 { ...order, items: [...] }
+        const orderWithItems = RetailOrderService.getOrderById(orderId);
+
+        // 2. 严格安全检查：确保订单属于当前客户
+        if (!orderWithItems || orderWithItems.customer_id !== customerId) {
+            console.warn(`[Route GET /me/orders/:id] Forbidden access attempt: User ${customerId} trying to view Order ${orderId}.`);
+            // 返回 404 避免泄漏订单 ID 是否存在的秘密
+            return res.status(404).json({ error: 'Order not found.' });
+        }
+        
+        // 3. 确保返回结构匹配前端 load 函数的期望: { order: {...}, items: [...] }
+        return res.status(200).json({
+            order: orderWithItems, 
+            items: orderWithItems.items // Service returns { ...order, items: [...] }
+        });
+
+    } catch (error) {
+        console.error(`[Route GET /me/orders/:id] Error retrieving order ${orderId}:`, error.message);
+        if (error.message.includes('Order not found')) {
+            return res.status(404).json({ error: 'Order not found.' });
+        }
+        return res.status(500).json({ error: 'Server error retrieving order details.' });
+    }
+});
+
 
 /* ======================================================
     Customers（后台 staff + customer 自身访问）

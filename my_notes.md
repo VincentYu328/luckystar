@@ -1,3 +1,12 @@
+git add .
+git commit -m "overwrite remote with local"
+git remote remove origin 2>/dev/null
+git remote add origin https://github.com/VincentYu328/luckystar.git
+git push origin main --force
+
+
+
+
 # luckystar
 使用AI协助本项目的编程与管理有以下几个注意事项：
 
