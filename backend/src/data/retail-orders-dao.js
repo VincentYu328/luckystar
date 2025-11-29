@@ -82,7 +82,7 @@ class RetailOrdersDAO {
             data.total_amount ?? 0,
             data.deposit_amount || 0,
             data.deposit_paid ?? 0,
-            orderDate, 
+            data.order_date, 
             data.due_date || null,
             data.confirmed_date || null,
             data.completed_date || null,

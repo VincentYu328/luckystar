@@ -123,6 +123,9 @@ class RetailOrderService {
         // 生成订单号
         const order_number = this.generateOrderNumber();
 
+        // ⭐ 使用前端传来的时间戳，如果没有则使用当前时间
+        const orderDate = payload.order_date || new Date().toISOString();
+
         // ⭐ 关键修复：使用前端传来的 subtotal 和 total_amount
         const orderData = {
             order_number,
@@ -135,7 +138,7 @@ class RetailOrderService {
             total_amount: Number(total_amount),
             deposit_amount: 0,
             deposit_paid: 0,
-            order_date: new Date().toISOString(),
+            order_date: orderDate, // ⭐ 使用从前端传来的或新生成的时间戳
             due_date: null,
             confirmed_date: null,
             completed_date: null,

@@ -510,20 +510,13 @@ frontend/
 │   │   │   ├── retail-orders/
 │   │   │   │   ├── +page.server.js
 │   │   │   │   ├── +page.svelte
-│   │   │   │   ├── pending/
-│   │   │   │   │   ├── +page.server.js
-│   │   │   │   │   └── +page.svelte
 │   │   │   │   ├── create/
 │   │   │   │   │   ├── +page.server.js
 │   │   │   │   │   └── +page.svelte
 │   │   │   │   └── [id]/
 │   │   │   │       ├── +page.server.js
 │   │   │   │       ├── +page.svelte
-│   │   │   │       ├── review/
-│   │   │   │       │   ├── +page.server.js
-│   │   │   │       │   └── +page.svelte
-│   │   │   │       └── complete/
-│   │   │           └── +page.server.js
+
 │   │   │
 │   │   │   ├── group-orders/
 │   │   │   │   ├── +page.server.js

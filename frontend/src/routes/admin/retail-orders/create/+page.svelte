@@ -145,12 +145,17 @@
                     });
                 }
 
+                // ⭐ 添加当前时间戳
+                const currentDateTime = new Date().toISOString();
+
                 const finalPayload = {
                     customer_id: Number(customer_id), 
                     notes,
                     items: itemsPayload,
                     subtotal: calculated_subtotal, 
                     total_amount: calculated_subtotal,
+                    order_date: currentDateTime, // ⭐ 添加订单创建时间
+                    status: 'pending'
                 };
                 
                 console.log('[CLIENT] Final Payload:', JSON.stringify(finalPayload, null, 2));
