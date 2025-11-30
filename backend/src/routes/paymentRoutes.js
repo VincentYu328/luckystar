@@ -8,6 +8,20 @@ import PaymentService from '../services/paymentService.js';
 const router = express.Router();
 
 // =========================================
+// 获取所有付款记录
+// GET /api/payments
+// =========================================
+router.get(
+  '/',
+  requireAuth,
+  requirePermission('orders.view'),
+  (req, res) => {
+    const list = PaymentService.getAllPayments();
+    res.json({ count: list.length, payments: list });
+  }
+);
+
+// =========================================
 // 获取订单的付款记录
 // GET /api/payments/:orderType/:orderId
 // =========================================

@@ -8,6 +8,10 @@ class PaymentService {
   // =====================================================
   // 查询
   // =====================================================
+  static getAllPayments() {
+    return PaymentsDAO.getAll();
+  }
+
   static getPaymentsByOrder(orderType, orderId) {
     return PaymentsDAO.getByOrder(orderType, orderId);
   }
@@ -37,7 +41,7 @@ class PaymentService {
       throw new Error('Unsupported order_type');
     }
 
-    const order = RetailOrderDAO.getById(order_id);
+    const order = RetailOrderDAO.getOrderById(order_id);
     if (!order) throw new Error('Order not found');
 
     // 写入付款记录
@@ -60,7 +64,7 @@ class PaymentService {
     }
 
     if (newStatus !== order.status) {
-      RetailOrderDAO.update(order_id, { status: newStatus });
+      RetailOrderDAO.updateOrder(order_id, { status: newStatus });
     }
 
     // 审计日志

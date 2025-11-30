@@ -7,7 +7,7 @@ import { cleanForm } from '$lib/server/form-utils.js'; // 确保 cleanForm 已�
 // =====================================================
 // LOAD FUNCTION (获取订单详情 - 最终修正版)
 // =====================================================
-export async function load({ params, url, locals }) {
+export async function load({ params, url, locals, fetch, cookies }) {
     const user = locals.authUser;
 
     // 权限检查 (保留不变)
@@ -15,7 +15,7 @@ export async function load({ params, url, locals }) {
         throw redirect(302, '/auth/login?redirect=/admin/retail-orders');
     }
 
-    const orderId = Number(params.id); 
+    const orderId = Number(params.id);
 
     if (isNaN(orderId)) {
         console.error("[LOAD ERROR] Invalid order ID format (NaN):", params.id);
@@ -25,33 +25,50 @@ export async function load({ params, url, locals }) {
     try {
         // 1. 获取订单详情
         const orderRes = await api.retailOrders.get(orderId);
-        
+
         // 调试步骤：打印 API 的原始响应
-        console.log("[DEBUG API Response]", JSON.stringify(orderRes)); 
-        
+        console.log("[DEBUG API Response]", JSON.stringify(orderRes));
+
         // ⭐ 修正检查逻辑：只需要检查响应对象本身是否存在，并且有 ID 即可
-        if (!orderRes || !orderRes.id) { 
+        if (!orderRes || !orderRes.id) {
             console.error("[LOAD ERROR] Order data missing or API error:", orderId);
             throw redirect(303, '/admin/retail-orders');
         }
-        
+
         // 2. 获取产品列表 (保留不变)
         const productsRes = await api.products.list().catch(err => {
             console.warn("[WARN] Failed to load products list:", err.message);
             return { products: [] };
         });
 
+        // 3. 获取付款记录
+        let payments = [];
+        try {
+            const paymentsRes = await api.payments.byOrder('retail', orderId, { fetch, cookies });
+            payments = paymentsRes.payments || [];
+        } catch (err) {
+            console.warn("[WARN] Failed to load payments for order:", orderId, err.message);
+        }
+
+        // 计算付款统计
+        const paidAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+        const totalAmount = orderRes.total_amount || 0;
+        const remainingAmount = totalAmount - paidAmount;
+
         return {
             // ⭐ 修正返回结构：orderRes 就是 order 对象
             order: orderRes,
-            items: orderRes.items || [], 
+            items: orderRes.items || [],
             products: productsRes.products || [],
+            payments: payments,
+            paidAmount: paidAmount,
+            remainingAmount: remainingAmount,
             isEditing: url.searchParams.has('edit')
         };
 
     } catch (err) {
         // 捕获 API 抛出的实际错误，并重定向 (保留不变)
-        console.error("[LOAD /admin/retail-orders/[id]] Error fetching order:", orderId, err.message); 
+        console.error("[LOAD /admin/retail-orders/[id]] Error fetching order:", orderId, err.message);
         throw redirect(303, `/admin/retail-orders?error=${encodeURIComponent('Failed to fetch order detail: ' + err.message)}`);
     }
 }
@@ -74,7 +91,7 @@ export const actions = {
 
         const formData = await request.formData();
         const cleanedData = cleanForm(Object.fromEntries(formData));
-        
+
         console.log("[ACTION /retail-orders/[id]?/update] updating order:", orderId, cleanedData);
 
         try {
@@ -104,6 +121,44 @@ export const actions = {
         } catch (err) {
             console.error("[ACTION /retail-orders/[id]?/update] Runtime Error:", err.message);
             throw redirect(303, `/admin/retail-orders/${orderId}?edit=true&error=${encodeURIComponent(err.message || 'Update failed due to runtime error')}`);
+        }
+    },
+
+    addPayment: async ({ locals, params, request, fetch, cookies }) => {
+        const user = locals.authUser;
+
+        if (!user || user.type !== 'staff') {
+            throw error(403, 'Forbidden');
+        }
+
+        const orderId = Number(params.id);
+        if (isNaN(orderId)) {
+            throw redirect(303, '/admin/retail-orders');
+        }
+
+        const formData = await request.formData();
+
+        const paymentData = {
+            order_type: 'retail',
+            order_id: orderId,
+            payment_type: formData.get('payment_type') || 'full',
+            payment_method: formData.get('payment_method') || 'cash',
+            amount: Number(formData.get('amount')) || 0,
+            transfer_reference: formData.get('transfer_reference') || null,
+            notes: formData.get('payment_notes') || null
+        };
+
+        try {
+            await api.payments.create(paymentData, { fetch, cookies });
+
+            // Redirect back to order page
+            throw redirect(303, `/admin/retail-orders/${orderId}`);
+        } catch (err) {
+            if (err.status === 303) throw err;
+            console.error('[addPayment] Error:', err);
+            return {
+                error: err.message || 'Failed to create payment.'
+            };
         }
     }
 };

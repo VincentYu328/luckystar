@@ -1,9 +1,11 @@
 <!-- frontend/src/routes/admin/payments/+page.svelte -->
 <script>
     export let data;
-    
+    export let form;
+
     // 🔥 修复：使用响应式解构
     $: payments = data.payments;
+    $: errorMsg = form?.error || '';
 </script>
 
 <div class="space-y-8 p-4">
@@ -11,6 +13,12 @@
     <h1 class="text-3xl font-semibold tracking-tight">
         Payments（付款记录）
     </h1>
+
+    {#if errorMsg}
+        <div class="p-4 rounded-lg bg-red-100 text-red-800 border border-red-300">
+            ❌ {errorMsg}
+        </div>
+    {/if}
 
     {#if payments.length === 0}
         <div class="text-center py-12 bg-gray-50 rounded-lg">
@@ -71,12 +79,25 @@
 
                             <!-- 操作 -->
                             <td class="p-3 text-right">
-                                
-                                    href={`/admin/payments/${p.id}`}
-                                    class="text-blue-600 hover:underline"
-                                <a>
-                                    View（查看）
-                                </a>
+                                <div class="flex justify-end gap-3">
+                                    {#if p.payment_method === 'transfer' && !p.transfer_verified}
+                                        <form method="POST" action="?/verify" class="inline">
+                                            <input type="hidden" name="paymentId" value={p.id} />
+                                            <button
+                                                type="submit"
+                                                class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                                            >
+                                                Verify（验证）
+                                            </button>
+                                        </form>
+                                    {/if}
+                                    <a
+                                        href={`/admin/payments/${p.id}`}
+                                        class="text-blue-600 hover:underline"
+                                    >
+                                        View（查看）
+                                    </a>
+                                </div>
                             </td>
 
                         </tr>

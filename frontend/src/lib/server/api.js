@@ -531,12 +531,36 @@ export const api = {
 
     // ---------------- PAYMENTS ----------------
     payments: {
-        list() { return request('GET', '/payments'); },
-        get(id) { return request('GET', `/payments/id/${id}`); }, // 注意这里是 /id/ 而不是直接 ${id}
-        byOrder(type, id) { return request('GET', `/payments/${type}/${id}`); },
-        create(data) { return request('POST', '/payments', data); },
-        verify(id) { return request('POST', `/payments/${id}/verify`); },
-        delete(id) { return request('DELETE', `/payments/${id}`); },
+        list(context = null) {
+            return context
+                ? requestWithContext('GET', '/payments', null, {}, {}, context)
+                : request('GET', '/payments');
+        },
+        get(id, context = null) {
+            return context
+                ? requestWithContext('GET', `/payments/id/${id}`, null, {}, {}, context)
+                : request('GET', `/payments/id/${id}`);
+        },
+        byOrder(type, id, context = null) {
+            return context
+                ? requestWithContext('GET', `/payments/${type}/${id}`, null, {}, {}, context)
+                : request('GET', `/payments/${type}/${id}`);
+        },
+        create(data, context = null) {
+            return context
+                ? requestWithContext('POST', '/payments', data, {}, {}, context)
+                : request('POST', '/payments', data);
+        },
+        verify(id, context = null) {
+            return context
+                ? requestWithContext('POST', `/payments/${id}/verify`, null, {}, {}, context)
+                : request('POST', `/payments/${id}/verify`);
+        },
+        delete(id, context = null) {
+            return context
+                ? requestWithContext('DELETE', `/payments/${id}`, null, {}, {}, context)
+                : request('DELETE', `/payments/${id}`);
+        },
     },
 
     // ---------------- SIZECHARTS ----------------

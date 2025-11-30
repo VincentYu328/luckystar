@@ -9,7 +9,9 @@ class RetailOrdersDAO {
 
     static getAllOrders() {
         return db.prepare(`
-            SELECT ro.*, c.full_name AS customer_name
+            SELECT ro.*,
+                   c.full_name AS customer_name,
+                   ro.order_date AS created_at
             FROM retail_orders ro
             LEFT JOIN customers c ON c.id = ro.customer_id
             ORDER BY ro.id DESC
@@ -19,22 +21,24 @@ class RetailOrdersDAO {
     // ⭐ 已修正：联接 users 表获取 created_by/confirmed_by 姓名
     static getOrderById(orderId) {
         return db.prepare(`
-            SELECT 
-                ro.*, 
+            SELECT
+                ro.*,
                 c.full_name AS customer_name,
-                u_created.full_name AS created_by_name,   
-                u_conf.full_name AS confirmed_by_name     
+                u_created.full_name AS created_by_name,
+                u_conf.full_name AS confirmed_by_name,
+                ro.order_date AS created_at
             FROM retail_orders ro
             LEFT JOIN customers c ON c.id = ro.customer_id
-            LEFT JOIN users u_created ON ro.created_by = u_created.id 
-            LEFT JOIN users u_conf ON ro.confirmed_by = u_conf.id     
+            LEFT JOIN users u_created ON ro.created_by = u_created.id
+            LEFT JOIN users u_conf ON ro.confirmed_by = u_conf.id
             WHERE ro.id = ?
         `).get(orderId);
     }
 
     static getOrderByNumber(orderNumber) {
         return db.prepare(`
-            SELECT *
+            SELECT *,
+                   order_date AS created_at
             FROM retail_orders
             WHERE order_number = ?
             `).get(orderNumber);
@@ -42,7 +46,8 @@ class RetailOrdersDAO {
 
     static getOrdersByCustomer(customerId) {
         return db.prepare(`
-            SELECT *
+            SELECT *,
+                   order_date AS created_at
             FROM retail_orders
             WHERE customer_id = ?
             ORDER BY id DESC

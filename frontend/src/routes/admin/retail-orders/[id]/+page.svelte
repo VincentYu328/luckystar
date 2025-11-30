@@ -4,8 +4,13 @@
     import { enhance } from "$app/forms";
 
     export let data;
+    export let form;
 
-    $: ({ order, items, products, isEditing } = data);
+    $: ({ order, items, products, payments, paidAmount, remainingAmount, isEditing } = data);
+    $: errorMsg = form?.error || '';
+
+    let showPaymentForm = false;
+    let paymentMethod = 'cash';
 
     // Status labels and colors (复用主列表的样式)
     const STATUS_LABEL = {
@@ -277,6 +282,195 @@
             {:else}
                 <p class="text-gray-500 text-center py-8">
                     No items in this order / 此订单无商品
+                </p>
+            {/if}
+        </div>
+
+        <!-- 付款记录部分 Payment Section -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-gray-800">
+                    Payments（付款记录）
+                </h2>
+                <button
+                    type="button"
+                    on:click={() => showPaymentForm = !showPaymentForm}
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition"
+                >
+                    {showPaymentForm ? 'Cancel（取消）' : '+ Add Payment（添加付款）'}
+                </button>
+            </div>
+
+            <!-- Error Message -->
+            {#if errorMsg}
+                <div class="p-4 rounded-lg bg-red-100 text-red-800 border border-red-300 mb-4">
+                    ❌ {errorMsg}
+                </div>
+            {/if}
+
+            <!-- Payment Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                <div>
+                    <p class="text-sm text-gray-600">Total Amount（订单总额）</p>
+                    <p class="text-2xl font-bold text-gray-800">
+                        ${(order?.total_amount ?? 0).toFixed(2)}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Paid（已付）</p>
+                    <p class="text-2xl font-bold text-green-600">
+                        ${(paidAmount ?? 0).toFixed(2)}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Remaining（欠款）</p>
+                    <p class="text-2xl font-bold {(remainingAmount ?? 0) > 0 ? 'text-red-600' : 'text-gray-800'}">
+                        ${(remainingAmount ?? 0).toFixed(2)}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Add Payment Form -->
+            {#if showPaymentForm}
+                <form
+                    method="POST"
+                    action="?/addPayment"
+                    use:enhance
+                    class="mb-6 p-4 border rounded-lg bg-blue-50"
+                >
+                    <h3 class="text-lg font-semibold mb-4">Record New Payment（记录新付款）</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Payment Type（付款类型）
+                            </label>
+                            <select
+                                name="payment_type"
+                                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="deposit">Deposit（定金）</option>
+                                <option value="final">Final Payment（尾款）</option>
+                                <option value="full" selected>Full Payment（全款）</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Payment Method（付款方式）
+                            </label>
+                            <select
+                                name="payment_method"
+                                bind:value={paymentMethod}
+                                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="cash">Cash（现金）</option>
+                                <option value="eftpos">EFTPOS（刷卡）</option>
+                                <option value="transfer">Bank Transfer（银行转账）</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Amount（金额）<span class="text-red-600">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                name="amount"
+                                step="0.01"
+                                min="0"
+                                required
+                                value={remainingAmount}
+                                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {#if paymentMethod === 'transfer'}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Transfer Reference（转账参考号）
+                                </label>
+                                <input
+                                    type="text"
+                                    name="transfer_reference"
+                                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                        {/if}
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Notes（备注）
+                            </label>
+                            <textarea
+                                name="payment_notes"
+                                rows="2"
+                                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 mt-4">
+                        <button
+                            type="submit"
+                            class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition"
+                        >
+                            Record Payment（记录付款）
+                        </button>
+                        <button
+                            type="button"
+                            on:click={() => showPaymentForm = false}
+                            class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition"
+                        >
+                            Cancel（取消）
+                        </button>
+                    </div>
+                </form>
+            {/if}
+
+            <!-- Payments List -->
+            {#if payments && payments.length > 0}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="p-3 font-medium">Date（日期）</th>
+                                <th class="p-3 font-medium">Type（类型）</th>
+                                <th class="p-3 font-medium">Method（方式）</th>
+                                <th class="p-3 font-medium text-right">Amount（金额）</th>
+                                <th class="p-3 font-medium">Status（状态）</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each payments as payment (payment.id)}
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="p-3 whitespace-nowrap">
+                                        {new Date(payment.payment_date).toLocaleDateString('zh-CN')}
+                                    </td>
+                                    <td class="p-3 capitalize">{payment.payment_type}</td>
+                                    <td class="p-3 capitalize">{payment.payment_method}</td>
+                                    <td class="p-3 text-right font-medium text-green-700">
+                                        ${(payment.amount ?? 0).toFixed(2)}
+                                    </td>
+                                    <td class="p-3">
+                                        {#if payment.payment_method === 'transfer'}
+                                            {#if payment.transfer_verified}
+                                                <span class="text-green-700 font-semibold">✓ Verified</span>
+                                            {:else}
+                                                <span class="text-orange-600 font-semibold">⏳ Pending Verification</span>
+                                            {/if}
+                                        {:else}
+                                            <span class="text-gray-500">—</span>
+                                        {/if}
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            {:else}
+                <p class="text-gray-500 text-center py-8">
+                    No payments recorded yet（尚无付款记录）
                 </p>
             {/if}
         </div>
