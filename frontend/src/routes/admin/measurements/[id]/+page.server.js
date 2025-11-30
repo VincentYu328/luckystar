@@ -25,21 +25,38 @@ export async function load({ locals, params, fetch, cookies }) {
     if (!measurement || !measurement.id) {
         throw error(404, "Measurement not found");
     }
-    if (!measurement.customer_id) {
-        throw error(500, "Measurement missing customer_id");
+
+    // Check if measurement is for customer or group member
+    if (!measurement.customer_id && !measurement.group_member_id) {
+        throw error(500, "Measurement missing customer_id or group_member_id");
     }
 
-    // ---- 获取客户 ----
-    const customerRes = await api.customers.get(measurement.customer_id, { fetch, cookies });
-    const customer = customerRes?.customer ?? customerRes;
+    let customer = null;
+    let groupMember = null;
+    let groupOrder = null;
 
-    if (!customer) {
-        throw error(404, "Customer not found");
+    if (measurement.customer_id) {
+        // ---- 获取客户 ----
+        const customerRes = await api.customers.get(measurement.customer_id, { fetch, cookies });
+        customer = customerRes?.customer ?? customerRes;
+
+        if (!customer) {
+            throw error(404, "Customer not found");
+        }
+    } else if (measurement.group_member_id) {
+        // ---- 获取团体成员信息 ----
+        // The measurement already includes customer_name from the group_member join
+        groupMember = {
+            id: measurement.group_member_id,
+            full_name: measurement.customer_name || 'Group Member'
+        };
     }
 
     return {
         measurement,
-        customer
+        customer,
+        groupMember,
+        isGroupMember: !!measurement.group_member_id
     };
 }
 
@@ -84,15 +101,13 @@ export const actions = {
 
         const id = Number(params.id);
 
-        // 1️⃣ 删除前先读取 measurement → 拿 customer_id
+        // 1️⃣ 删除前先读取 measurement → 拿 customer_id 或 group_member_id
         const raw = await api.measurements.get(id, { fetch, cookies });
         const measurement = raw?.measurement ?? raw;
 
-        if (!measurement || !measurement.customer_id) {
+        if (!measurement) {
             return { success: false, error: "Cannot load measurement before delete" };
         }
-
-        const customerId = measurement.customer_id;
 
         // 2️⃣ 删除
         const res = await api.measurements.delete(id, { fetch, cookies });
@@ -101,7 +116,13 @@ export const actions = {
             return { success: false, error: res?.error || "Delete failed" };
         }
 
-        // 3️⃣ 重定向到客户详情页
-        throw redirect(303, `/admin/customers/${customerId}`);
+        // 3️⃣ 重定向
+        if (measurement.customer_id) {
+            // Redirect to customer detail page
+            throw redirect(303, `/admin/customers/${measurement.customer_id}`);
+        } else {
+            // Redirect to measurements list for group members
+            throw redirect(303, '/admin/measurements');
+        }
     }
 };

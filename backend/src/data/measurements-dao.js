@@ -11,13 +11,14 @@ class MeasurementsDAO {
 
   static getAll() {
     return db.prepare(`
-      SELECT 
+      SELECT
         m.*,
-        c.full_name as customer_name,
+        COALESCE(c.full_name, gm.full_name) as customer_name,
         NULL as gender,
         m.measured_at as updated_at
       FROM measurements m
       LEFT JOIN customers c ON m.customer_id = c.id
+      LEFT JOIN group_members gm ON m.group_member_id = gm.id
       ORDER BY m.measured_at DESC
     `).all();
   }
@@ -35,9 +36,13 @@ class MeasurementsDAO {
   // 根据 id 查询单条记录
   static getById(id) {
     return db.prepare(`
-      SELECT *
-      FROM measurements
-      WHERE id = ?
+      SELECT
+        m.*,
+        COALESCE(c.full_name, gm.full_name) as customer_name
+      FROM measurements m
+      LEFT JOIN customers c ON m.customer_id = c.id
+      LEFT JOIN group_members gm ON m.group_member_id = gm.id
+      WHERE m.id = ?
     `).get(id);
   }
 
