@@ -1,6 +1,9 @@
 <script>
   export let data;
 
+  console.log('[SIZE GUIDE CLIENT] Received data:', data);
+  console.log('[SIZE GUIDE CLIENT] Charts:', data?.charts);
+
   const apiCharts = data?.charts && data.charts.length > 0 ? data.charts : null;
 
   const fallbackCharts = [

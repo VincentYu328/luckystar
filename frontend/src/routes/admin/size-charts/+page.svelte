@@ -5,18 +5,36 @@
 
 <div class="space-y-8">
 
-    <!-- 标题 + 新建 -->
+    <!-- 标题 + 操作按钮 -->
     <div class="flex justify-between items-center">
         <h1 class="text-3xl font-semibold tracking-tight">
             Size Charts（尺码表）
         </h1>
 
-        <a
-            href="/admin/size-charts/create"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-            + New Size Chart（新增尺码表）
-        </a>
+        <div class="flex gap-3">
+            <a
+                href="/size-guide"
+                target="_blank"
+                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition"
+            >
+                👁 Preview Public Size Guide
+            </a>
+            <a
+                href="/admin/size-charts/create"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition"
+            >
+                + New Size Chart（新增尺码表）
+            </a>
+        </div>
+    </div>
+
+    <!-- 说明信息 -->
+    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <p class="text-blue-800 text-sm">
+            <strong>ℹ️ Note:</strong> Size charts created here will be displayed on the public
+            <a href="/size-guide" target="_blank" class="underline hover:text-blue-900">Size Guide</a> page.
+            You can preview how they appear to customers by clicking the "Preview" button above.
+        </p>
     </div>
 
     <!-- 列表 -->
@@ -59,16 +77,9 @@
                             <td class="p-3 text-right space-x-3 whitespace-nowrap">
                                 <a
                                     href={`/admin/size-charts/${sc.id}/edit`}
-                                    class="text-blue-600 hover:underline"
+                                    class="text-blue-600 hover:underline font-medium"
                                 >
                                     Edit（编辑）
-                                </a>
-
-                                <a
-                                    href={`/admin/size-charts/${sc.id}/items`}
-                                    class="text-gray-600 hover:underline"
-                                >
-                                    Items（尺码）
                                 </a>
                             </td>
 

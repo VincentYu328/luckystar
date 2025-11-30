@@ -78,6 +78,9 @@ import { PUBLIC_API_URL } from '$env/static/public';
 // 拼接完整的后端 API 地址
 const BASE_URL = `${PUBLIC_API_URL}/api`;
 
+// 导出 API_BASE 供其他地方使用
+export const API_BASE = BASE_URL;
+
 let globalFetch = null;
 
 /**
@@ -572,10 +575,10 @@ export const api = {
         delete(id) { return request('DELETE', `/sizecharts/${id}`); },
         items: {
             list(chartId) { return request('GET', `/sizecharts/${chartId}/items`); },
-            get(id) { return request('GET', `/sizechart-items/${id}`); },
+            get(id) { return request('GET', `/sizecharts/items/${id}`); },
             create(chartId, data) { return request('POST', `/sizecharts/${chartId}/items`, data); },
-            update(id, data) { return request('PUT', `/sizechart-items/${id}`, data); },
-            delete(id) { return request('DELETE', `/sizechart-items/${id}`); },
+            update(id, data) { return request('PUT', `/sizecharts/items/${id}`, data); },
+            delete(id) { return request('DELETE', `/sizecharts/items/${id}`); },
         },
     },
 

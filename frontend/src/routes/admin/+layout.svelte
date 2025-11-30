@@ -54,6 +54,11 @@
 				📐 Measurements
 			</a>
 
+			<a href="/admin/size-charts"
+				class="block px-3 py-2 rounded hover:bg-gray-100">
+				📏 Size Charts
+			</a>
+
 			<a href="/admin/payments"
 				class="block px-3 py-2 rounded hover:bg-gray-100">
 				💰 Payments

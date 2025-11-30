@@ -8,6 +8,31 @@ const router = express.Router();
 
 /**
  * ======================================================
+ * Public Route - MUST BE FIRST to avoid conflict with /:id
+ * ======================================================
+ */
+// GET /api/sizecharts/public
+router.get('/public', (req, res) => {
+  try {
+    const charts = SizeChartService.getAllCharts();
+
+    const chartsWithItems = charts.map(chart => {
+      const items = SizeChartService.getItemsByChart(chart.id);
+      return {
+        ...chart,
+        items
+      };
+    });
+
+    res.json(chartsWithItems);
+  } catch (err) {
+    console.error('Error fetching public size charts:', err);
+    res.status(500).json({ error: 'Failed to load size charts' });
+  }
+});
+
+/**
+ * ======================================================
  * Size Charts（主表）
  * ======================================================
  */
@@ -161,26 +186,5 @@ router.delete(
     }
   }
 );
-
-// GET /api/sizecharts/public
-router.get('/public', (req, res) => {
-  try {
-    const charts = SizeChartService.getAllCharts();
-
-    const chartsWithItems = charts.map(chart => {
-      const items = SizeChartService.getItemsByChart(chart.id);
-      return {
-        ...chart,
-        items
-      };
-    });
-
-    res.json(chartsWithItems);
-  } catch (err) {
-    console.error('Error fetching public size charts:', err);
-    res.status(500).json({ error: 'Failed to load size charts' });
-  }
-});
-
 
 export default router;

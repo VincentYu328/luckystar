@@ -13,10 +13,12 @@ export async function load({ locals }) {
     // 拉取全部尺码表
     const result = await api.sizeCharts.list();
 
-    // 兼容两种结构：直接数组 或 { items: [...] }
+    // 兼容多种结构：直接数组 或 { charts: [...] } 或 { items: [...] }
     const sizeCharts = Array.isArray(result)
         ? result
-        : (result?.items ?? []);
+        : (result?.charts ?? result?.items ?? []);
+
+    console.log('[SIZE CHARTS PAGE] Loaded charts:', sizeCharts);
 
     return { sizeCharts };
 }
