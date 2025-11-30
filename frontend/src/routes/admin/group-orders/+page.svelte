@@ -30,10 +30,10 @@
             Group Orders（团体订单）
         </h1>
 
-        
+        <a
             href="/admin/group-orders/create"
             class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-        <a>
+        >
             + Create Group Order（创建团体订单）
         </a>
     </div>

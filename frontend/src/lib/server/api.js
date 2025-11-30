@@ -166,27 +166,77 @@ export const api = {
 
     // ---------------- PRODUCTS ----------------
     products: {
-        list() { return request('GET', '/products'); },
-        get(id) { return request('GET', `/products/${id}`); },
-        listCategories() { return request('GET', '/products/categories'); },
-        images(id) { return request('GET', `/products/${id}/images`); },
-        // ❌ 修正：删除错误的 stock(id) 方法
-        // stock(id) { return request('GET', `/products/${id}/stock`); }, 
-        create(data) { return request('POST', '/products', data); },
-        update(id, data) { return request('PUT', `/products/${id}`, data); },
-        delete(id) { return request('DELETE', `/products/${id}`); },
-        addImage(id, data) { return request('POST', `/products/${id}/images`, data); },
-        updateImage(imgId, data) { return request('PUT', `/products/images/${imgId}`, data); },
-        deleteImage(imgId) { return request('DELETE', `/products/images/${imgId}`); },
+        list(context = null) {
+            return context
+                ? requestWithContext('GET', '/products', null, {}, {}, context)
+                : request('GET', '/products');
+        },
+        get(id, context = null) {
+            return context
+                ? requestWithContext('GET', `/products/${id}`, null, {}, {}, context)
+                : request('GET', `/products/${id}`);
+        },
+        listCategories(context = null) {
+            return context
+                ? requestWithContext('GET', '/products/categories', null, {}, {}, context)
+                : request('GET', '/products/categories');
+        },
+        images(id, context = null) {
+            return context
+                ? requestWithContext('GET', `/products/${id}/images`, null, {}, {}, context)
+                : request('GET', `/products/${id}/images`);
+        },
+        create(data, context = null) {
+            return context
+                ? requestWithContext('POST', '/products', data, {}, {}, context)
+                : request('POST', '/products', data);
+        },
+        update(id, data, context = null) {
+            return context
+                ? requestWithContext('PUT', `/products/${id}`, data, {}, {}, context)
+                : request('PUT', `/products/${id}`, data);
+        },
+        delete(id, context = null) {
+            return context
+                ? requestWithContext('DELETE', `/products/${id}`, null, {}, {}, context)
+                : request('DELETE', `/products/${id}`);
+        },
+        addImage(id, data, context = null) {
+            return context
+                ? requestWithContext('POST', `/products/${id}/images`, data, {}, {}, context)
+                : request('POST', `/products/${id}/images`, data);
+        },
+        updateImage(imgId, data, context = null) {
+            return context
+                ? requestWithContext('PUT', `/products/images/${imgId}`, data, {}, {}, context)
+                : request('PUT', `/products/images/${imgId}`, data);
+        },
+        deleteImage(imgId, context = null) {
+            return context
+                ? requestWithContext('DELETE', `/products/images/${imgId}`, null, {}, {}, context)
+                : request('DELETE', `/products/images/${imgId}`);
+        },
 
         // ⭐ 新增：成衣入库批次 (对应 POST /products/garment/incoming)
-        recordGarmentIncoming(data) { return request('POST', '/products/garment/incoming', data); },
+        recordGarmentIncoming(data, context = null) {
+            return context
+                ? requestWithContext('POST', '/products/garment/incoming', data, {}, {}, context)
+                : request('POST', '/products/garment/incoming', data);
+        },
 
         // ⭐ 新增：创建唯一项/条码 (对应 POST /products/inventory/item)
-        createUniqueItem(data) { return request('POST', '/products/inventory/item', data); },
+        createUniqueItem(data, context = null) {
+            return context
+                ? requestWithContext('POST', '/products/inventory/item', data, {}, {}, context)
+                : request('POST', '/products/inventory/item', data);
+        },
 
         // ⭐ 新增：通过条码查询唯一项 (对应 GET /products/inventory/item/:uniqueCode)
-        getUniqueItemByCode(uniqueCode) { return request('GET', `/products/inventory/item/${uniqueCode}`); },
+        getUniqueItemByCode(uniqueCode, context = null) {
+            return context
+                ? requestWithContext('GET', `/products/inventory/item/${uniqueCode}`, null, {}, {}, context)
+                : request('GET', `/products/inventory/item/${uniqueCode}`);
+        },
     },
 
     // ---------------- INVENTORY ----------------
@@ -300,6 +350,55 @@ export const api = {
     },
 
 
+    // ---------------- GROUP ORDERS ----------------
+    groupOrders: {
+        list(context = null) {
+            return context
+                ? requestWithContext('GET', '/customers/group-orders', null, {}, {}, context)
+                : request('GET', '/customers/group-orders');
+        },
+        get(id, context = null) {
+            return context
+                ? requestWithContext('GET', `/customers/group-orders/${id}`, null, {}, {}, context)
+                : request('GET', `/customers/group-orders/${id}`);
+        },
+        create(data, context = null) {
+            return context
+                ? requestWithContext('POST', '/customers/group-orders', data, {}, {}, context)
+                : request('POST', '/customers/group-orders', data);
+        },
+        update(id, data, context = null) {
+            return context
+                ? requestWithContext('PUT', `/customers/group-orders/${id}`, data, {}, {}, context)
+                : request('PUT', `/customers/group-orders/${id}`, data);
+        },
+        delete(id, context = null) {
+            return context
+                ? requestWithContext('DELETE', `/customers/group-orders/${id}`, null, {}, {}, context)
+                : request('DELETE', `/customers/group-orders/${id}`);
+        },
+        members(orderId, context = null) {
+            return context
+                ? requestWithContext('GET', `/customers/group-orders/${orderId}/members`, null, {}, {}, context)
+                : request('GET', `/customers/group-orders/${orderId}/members`);
+        },
+        addMember(orderId, data, context = null) {
+            return context
+                ? requestWithContext('POST', `/customers/group-orders/${orderId}/members`, data, {}, {}, context)
+                : request('POST', `/customers/group-orders/${orderId}/members`, data);
+        },
+        updateMember(memberId, data, context = null) {
+            return context
+                ? requestWithContext('PUT', `/customers/group-members/${memberId}`, data, {}, {}, context)
+                : request('PUT', `/customers/group-members/${memberId}`, data);
+        },
+        deleteMember(memberId, context = null) {
+            return context
+                ? requestWithContext('DELETE', `/customers/group-members/${memberId}`, null, {}, {}, context)
+                : request('DELETE', `/customers/group-members/${memberId}`);
+        },
+    },
+
     // ---------------- CUSTOMERS ----------------
     customers: {
         list(queryParams = {}, context = null) {
@@ -345,14 +444,56 @@ export const api = {
 
     // ---------------- MEASUREMENTS ----------------
     measurements: {
-        list() { return request('GET', '/measurements'); },
-        get(id) { return request('GET', `/measurements/${id}`); },
-        byCustomer(id) { return request('GET', `/customers/${id}/measurements`); },
-        byGroupMember(id) { return request('GET', `/group-members/${id}/measurements`); },
-        createForCustomer(id, data) { return request('POST', `/customers/${id}/measurements`, data); },
-        createForGroupMember(id, data) { return request('POST', `/group-members/${id}/measurements`, data); },
-        update(id, data) { return request('PUT', `/measurements/${id}`, data); },
-        delete(id) { return request('DELETE', `/measurements/${id}`); },
+        list(context = null) {
+            return context
+                ? requestWithContext('GET', '/measurements', null, {}, {}, context)
+                : request('GET', '/measurements');
+        },
+        get(id, context = null) {
+            return context
+                ? requestWithContext('GET', `/measurements/${id}`, null, {}, {}, context)
+                : request('GET', `/measurements/${id}`);
+        },
+        byCustomer(id, context = null) {
+            return context
+                ? requestWithContext('GET', `/customers/${id}/measurements`, null, {}, {}, context)
+                : request('GET', `/customers/${id}/measurements`);
+        },
+        byGroupMember(id, context = null) {
+            return context
+                ? requestWithContext('GET', `/group-members/${id}/measurements`, null, {}, {}, context)
+                : request('GET', `/group-members/${id}/measurements`);
+        },
+        getByGroupMember(memberId, context = null) {
+            return context
+                ? requestWithContext('GET', `/measurements/group-member/${memberId}`, null, {}, {}, context)
+                : request('GET', `/measurements/group-member/${memberId}`);
+        },
+        createForCustomer(id, data, context = null) {
+            return context
+                ? requestWithContext('POST', `/customers/${id}/measurements`, data, {}, {}, context)
+                : request('POST', `/customers/${id}/measurements`, data);
+        },
+        createForGroupMember(id, data, context = null) {
+            return context
+                ? requestWithContext('POST', `/group-members/${id}/measurements`, data, {}, {}, context)
+                : request('POST', `/group-members/${id}/measurements`, data);
+        },
+        saveForGroupMember(memberId, data, context = null) {
+            return context
+                ? requestWithContext('POST', `/measurements/group-member/${memberId}`, data, {}, {}, context)
+                : request('POST', `/measurements/group-member/${memberId}`, data);
+        },
+        update(id, data, context = null) {
+            return context
+                ? requestWithContext('PUT', `/measurements/${id}`, data, {}, {}, context)
+                : request('PUT', `/measurements/${id}`, data);
+        },
+        delete(id, context = null) {
+            return context
+                ? requestWithContext('DELETE', `/measurements/${id}`, null, {}, {}, context)
+                : request('DELETE', `/measurements/${id}`);
+        },
     },
 
     // ---------------- PAYMENTS ----------------

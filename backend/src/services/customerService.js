@@ -115,6 +115,11 @@ class CustomerService {
     // =====================================================
     // Group Orders（后台）
     // =====================================================
+    static getAllGroupOrders() {
+        console.log("[CustomerService] getAllGroupOrders called");
+        return CustomersDAO.getAllGroupOrders();
+    }
+
     static getGroupOrdersByCustomer(customerId) {
         console.log(`[CustomerService] getGroupOrdersByCustomer called for customer ID: ${customerId}`);
         return CustomersDAO.getGroupOrdersByCustomer(customerId);
@@ -129,7 +134,9 @@ class CustomerService {
 
     static createGroupOrder(adminId, payload) {
         console.log("[CustomerService] createGroupOrder called with payload:", payload);
-        return CustomersDAO.createGroupOrder(payload);
+        const result = CustomersDAO.createGroupOrder(payload);
+        console.log("[CustomerService] createGroupOrder result:", result);
+        return { success: true, lastInsertRowid: result.lastInsertRowid, id: result.lastInsertRowid };
     }
 
     static updateGroupOrder(adminId, orderId, fields) {
@@ -154,7 +161,9 @@ class CustomerService {
 
     static createGroupMember(adminId, payload) {
         console.log("[CustomerService] createGroupMember called with payload:", payload);
-        return CustomersDAO.createGroupMember(payload);
+        const result = CustomersDAO.createGroupMember(payload);
+        console.log("[CustomerService] createGroupMember result:", result);
+        return { success: true, lastInsertRowid: result.lastInsertRowid, id: result.lastInsertRowid };
     }
 
     static updateGroupMember(adminId, id, fields) {

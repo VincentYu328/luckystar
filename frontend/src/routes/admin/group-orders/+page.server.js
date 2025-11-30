@@ -2,7 +2,7 @@
 import { redirect } from '@sveltejs/kit';
 import { api } from '$lib/server/api.js';
 
-export async function load({ locals, url }) {
+export async function load({ locals, url, fetch, cookies }) {
     const user = locals.authUser;
 
     // 仅 STAFF 可访问
@@ -11,9 +11,9 @@ export async function load({ locals, url }) {
     }
 
     try {
-        // 🔥 修复：使用统一的 api 对象
-        const res = await api.groupOrders.list();
-        
+        // 🔥 修复：使用统一的 api 对象，并传入 context
+        const res = await api.groupOrders.list({ fetch, cookies });
+
         console.log("[LOAD /admin/group-orders] fetched orders:", res.orders ? res.orders.length : 0);
 
         // 从 URL 中获取操作结果
@@ -45,7 +45,7 @@ export async function load({ locals, url }) {
 
 // 🔥 添加 actions（删除、更新等）
 export const actions = {
-    delete: async ({ locals, request }) => {
+    delete: async ({ locals, request, fetch, cookies }) => {
         const user = locals.authUser;
         if (!user || user.type !== 'staff') {
             throw redirect(302, '/auth/login?redirect=/admin/group-orders');
@@ -59,9 +59,9 @@ export const actions = {
         }
 
         try {
-            const res = await api.groupOrders.delete(orderId);
+            const res = await api.groupOrders.delete(orderId, { fetch, cookies });
             console.log("[ACTION /admin/group-orders?/delete] API response:", res);
-            
+
             if (res.success) {
                 throw redirect(303, '/admin/group-orders?deleteSuccess=true');
             } else {
@@ -69,35 +69,11 @@ export const actions = {
             }
         } catch (err) {
             console.error("[ACTION /admin/group-orders?/delete] Error:", err);
+
+            // If it's a redirect, throw it
+            if (err.status === 303) throw err;
+
             throw redirect(303, `/admin/group-orders?deleteError=${encodeURIComponent(err.message || 'Delete failed')}`);
-        }
-    },
-
-    updateStatus: async ({ locals, request }) => {
-        const user = locals.authUser;
-        if (!user || user.type !== 'staff') {
-            throw redirect(302, '/auth/login?redirect=/admin/group-orders');
-        }
-
-        const formData = await request.formData();
-        const orderId = Number(formData.get('order_id'));
-        const newStatus = formData.get('status');
-
-        if (!orderId || !newStatus) {
-            throw redirect(303, `/admin/group-orders?updateError=${encodeURIComponent('Missing order id or status')}`);
-        }
-
-        try {
-            const res = await api.groupOrders.updateStatus(orderId, newStatus);
-            
-            if (res.success) {
-                throw redirect(303, '/admin/group-orders?updateSuccess=true');
-            } else {
-                throw redirect(303, `/admin/group-orders?updateError=${encodeURIComponent(res.error || 'Update failed')}`);
-            }
-        } catch (err) {
-            console.error("[ACTION /admin/group-orders?/updateStatus] Error:", err);
-            throw redirect(303, `/admin/group-orders?updateError=${encodeURIComponent(err.message || 'Update failed')}`);
         }
     }
 };

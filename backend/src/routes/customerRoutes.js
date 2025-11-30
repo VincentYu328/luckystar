@@ -304,6 +304,23 @@ router.delete('/:id', requireAuth, async (req, res) => {
 /* ======================================================
     Group Orders
 ====================================================== */
+
+// GET /api/customers/group-orders - List all group orders (must come before /:id/group-orders)
+router.get(
+    '/group-orders',
+    requireAuth,
+    requirePermission('customers.view'),
+    async (req, res) => {
+        try {
+            const orders = CustomerService.getAllGroupOrders();
+            res.json({ count: orders.length, orders });
+        } catch (err) {
+            console.error('Error fetching all group orders:', err);
+            res.status(500).json({ error: err.message });
+        }
+    }
+);
+
 router.get('/:id/group-orders', requireAuth, async (req, res) => {
     if (req.user.role !== 'customer') {
         requirePermission('customers.view')(req, res, () => {});
@@ -414,13 +431,23 @@ router.post(
     requirePermission('customers.update'),
     async (req, res) => {
         try {
-            const result = await CustomerService.createGroupMember(req.user.id, {
+            console.log('[POST /group-orders/:orderId/members] orderId:', req.params.orderId);
+            console.log('[POST /group-orders/:orderId/members] req.body:', JSON.stringify(req.body));
+
+            const payload = {
                 ...req.body,
                 group_order_id: Number(req.params.orderId)
-            });
+            };
+
+            console.log('[POST /group-orders/:orderId/members] payload to service:', JSON.stringify(payload));
+
+            const result = await CustomerService.createGroupMember(req.user.id, payload);
+
+            console.log('[POST /group-orders/:orderId/members] result:', JSON.stringify(result));
+
             res.status(201).json(result);
         } catch (err) {
-            console.error(`Error creating group member for order ID ${req.params.orderId}:`, err);
+            console.error(`[POST /group-orders/:orderId/members] Error creating group member for order ID ${req.params.orderId}:`, err);
             res.status(400).json({ error: err.message });
         }
     }

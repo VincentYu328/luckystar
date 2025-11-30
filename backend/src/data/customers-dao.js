@@ -311,6 +311,22 @@ class CustomersDAO {
     // =====================================================
     // group_orders 表
     // =====================================================
+    static getAllGroupOrders() {
+        return db.prepare(`
+            SELECT
+                go.*,
+                c.full_name as leader_name,
+                c.phone as leader_phone,
+                c.email as leader_email,
+                COUNT(DISTINCT gm.id) as member_count
+            FROM group_orders go
+            LEFT JOIN customers c ON go.leader_id = c.id
+            LEFT JOIN group_members gm ON go.id = gm.group_order_id
+            GROUP BY go.id
+            ORDER BY go.created_at DESC
+        `).all();
+    }
+
     static getGroupOrderById(orderId) {
         return db.prepare(`
             SELECT *

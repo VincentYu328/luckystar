@@ -1,54 +1,163 @@
-import { apiGet, apiPost } from '$lib/server/api.js';
-import { error, redirect } from '@sveltejs/kit';
+<script>
+    export let data;
 
-export async function load({ locals, params }) {
-    const user = locals.authUser;
+    const order = data.order;
+    const members = data.members;
+</script>
 
-    if (!user || user.type !== 'staff') {
-        throw error(403, 'Forbidden');
-    }
+<div class="space-y-8 p-4">
 
-    const id = params.id;
+    <!-- 标题和操作按钮 -->
+    <div class="flex justify-between items-center">
+        <div>
+            <a href="/admin/group-orders" class="text-blue-600 hover:underline text-sm mb-2 inline-block">
+                ← Back to Group Orders
+            </a>
+            <h1 class="text-3xl font-semibold tracking-tight">
+                Group Order #{order.id}
+            </h1>
+        </div>
 
-    // 获取团体订单信息
-    const order = await apiGet(`/group-orders/${id}`);
+        <div class="flex gap-3">
+            <a
+                href="/admin/group-orders/{order.id}/edit"
+                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            >
+                Edit / 编辑
+            </a>
+        </div>
+    </div>
 
-    if (!order || !order.order) {
-        throw error(404, 'Group order not found');
-    }
+    <!-- 订单信息卡片 -->
+    <div class="bg-white border rounded-lg p-6 space-y-4">
+        <h2 class="text-xl font-semibold border-b pb-2">Order Information（订单信息）</h2>
 
-    return {
-        order: order.order
-    };
-}
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <div class="text-sm text-gray-500">Group Name（团体名称）</div>
+                <div class="font-medium">{order.group_name}</div>
+            </div>
 
-export const actions = {
-    update: async ({ locals, request, params }) => {
-        const user = locals.authUser;
+            {#if order.event_name}
+                <div>
+                    <div class="text-sm text-gray-500">Event Name（活动名称）</div>
+                    <div class="font-medium">{order.event_name}</div>
+                </div>
+            {/if}
 
-        if (!user || user.type !== 'staff') {
-            throw error(403, 'Forbidden');
-        }
+            <div>
+                <div class="text-sm text-gray-500">Leader（负责人）</div>
+                <div class="font-medium">{order.leader_name || '—'}</div>
+                {#if order.leader_phone}
+                    <div class="text-sm text-gray-600">{order.leader_phone}</div>
+                {/if}
+                {#if order.leader_email}
+                    <div class="text-sm text-gray-600">{order.leader_email}</div>
+                {/if}
+            </div>
 
-        const id = params.id;
-        const form = await request.formData();
+            {#if order.expected_members}
+                <div>
+                    <div class="text-sm text-gray-500">Expected Members（预计成员数）</div>
+                    <div class="font-medium">{order.expected_members}</div>
+                </div>
+            {/if}
 
-        const payload = {
-            group_name: form.get('group_name'),
-            contact_name: form.get('contact_name'),
-            contact_phone: form.get('contact_phone'),
-            notes: form.get('notes') || ''
-        };
+            {#if order.event_start || order.event_end}
+                <div>
+                    <div class="text-sm text-gray-500">Event Dates（活动日期）</div>
+                    <div class="font-medium">
+                        {#if order.event_start}
+                            {new Date(order.event_start).toLocaleDateString('zh-CN')}
+                        {/if}
+                        {#if order.event_start && order.event_end}
+                            -
+                        {/if}
+                        {#if order.event_end}
+                            {new Date(order.event_end).toLocaleDateString('zh-CN')}
+                        {/if}
+                    </div>
+                </div>
+            {/if}
 
-        const res = await apiPost(`/group-orders/${id}/update`, payload);
+            {#if order.fabric_selected}
+                <div>
+                    <div class="text-sm text-gray-500">Selected Fabric（选择的布料）</div>
+                    <div class="font-medium">Fabric ID: {order.fabric_selected}</div>
+                </div>
+            {/if}
 
-        if (!res.success) {
-            return {
-                error: res.error || 'Failed to update group order.'
-            };
-        }
+            <div>
+                <div class="text-sm text-gray-500">Created At（创建时间）</div>
+                <div class="font-medium">{new Date(order.created_at).toLocaleString('zh-CN')}</div>
+            </div>
+        </div>
 
-        // 刷新详情页
-        throw redirect(303, `/admin/group-orders/${id}`);
-    }
-};
+        {#if order.notes}
+            <div>
+                <div class="text-sm text-gray-500 mb-1">Notes（备注）</div>
+                <div class="bg-gray-50 p-3 rounded border text-sm whitespace-pre-wrap">{order.notes}</div>
+            </div>
+        {/if}
+    </div>
+
+    <!-- 成员列表 -->
+    <div class="bg-white border rounded-lg p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold">Members（成员列表）</h2>
+            <a
+                href="/admin/group-orders/{order.id}/members/add"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+                + Add Member / 添加成员
+            </a>
+        </div>
+
+        {#if members.length === 0}
+            <div class="text-center py-8 text-gray-500">
+                No members yet. Click "Add Member" to add the first member.
+                <br />
+                暂无成员，点击"添加成员"按钮添加第一个成员。
+            </div>
+        {:else}
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="p-3">Name（姓名）</th>
+                        <th class="p-3">Phone（电话）</th>
+                        <th class="p-3">Email（邮箱）</th>
+                        <th class="p-3">Note（备注）</th>
+                        <th class="p-3 text-right">Actions（操作）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each members as member}
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="p-3 font-medium">{member.full_name}</td>
+                            <td class="p-3">{member.phone || '—'}</td>
+                            <td class="p-3">{member.email || '—'}</td>
+                            <td class="p-3 text-gray-600">{member.note || '—'}</td>
+                            <td class="p-3">
+                                <div class="flex justify-end gap-2">
+                                    <a
+                                        href="/admin/group-orders/{order.id}/members/{member.id}/measurement"
+                                        class="text-blue-600 hover:underline"
+                                    >
+                                        Measurements / 量体
+                                    </a>
+                                    <a
+                                        href="/admin/group-orders/{order.id}/members/{member.id}/edit"
+                                        class="text-gray-600 hover:underline"
+                                    >
+                                        Edit / 编辑
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        {/if}
+    </div>
+
+</div>

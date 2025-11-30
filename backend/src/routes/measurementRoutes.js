@@ -40,6 +40,78 @@ router.get(
 
 /**
  * ==========================================================
+ * GET /api/measurements/group-member/:memberId
+ * 获取团体成员的量体数据
+ * （注意：必须在 /:id 路由之前定义）
+ * ==========================================================
+ */
+router.get(
+  '/group-member/:memberId',
+  requireAuth,
+  requirePermission('customers.view'),
+  (req, res) => {
+    try {
+      const memberId = Number(req.params.memberId);
+      console.log('[GET /measurements/group-member/:memberId] memberId:', memberId);
+
+      const measurement = MeasurementsDAO.getByGroupMember(memberId);
+      console.log('[GET /measurements/group-member/:memberId] measurement:', measurement);
+
+      res.json(measurement || {});
+    } catch (err) {
+      console.error('[GET /measurements/group-member/:memberId] Error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+/**
+ * ==========================================================
+ * POST /api/measurements/group-member/:memberId
+ * 创建或更新团体成员的量体数据
+ * （注意：必须在 /:id 路由之前定义）
+ * ==========================================================
+ */
+router.post(
+  '/group-member/:memberId',
+  requireAuth,
+  requirePermission('customers.update'),
+  (req, res) => {
+    try {
+      const adminId = req.user.id;
+      const memberId = Number(req.params.memberId);
+      console.log('[POST /measurements/group-member/:memberId] memberId:', memberId);
+      console.log('[POST /measurements/group-member/:memberId] body:', req.body);
+
+      // 检查是否已存在量体记录
+      const existing = MeasurementsDAO.getByGroupMember(memberId);
+
+      let result;
+      if (existing) {
+        // 更新现有记录
+        result = MeasurementService.updateMeasurement(adminId, existing.id, req.body);
+        console.log('[POST /measurements/group-member/:memberId] Updated existing measurement');
+      } else {
+        // 创建新记录
+        const payload = {
+          ...req.body,
+          group_member_id: memberId,
+          measured_by: adminId
+        };
+        result = MeasurementService.createMeasurement(adminId, payload);
+        console.log('[POST /measurements/group-member/:memberId] Created new measurement');
+      }
+
+      res.json(result);
+    } catch (err) {
+      console.error('[POST /measurements/group-member/:memberId] Error:', err);
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
+/**
+ * ==========================================================
  * GET /api/measurements/:id
  * 获取单条量体
  * ==========================================================
