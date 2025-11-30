@@ -38,6 +38,16 @@
     <!-- 已有数据，展示 -->
     <div class="space-y-8">
 
+      <!-- 提示信息 - 一旦有 measurements 就显示 -->
+      <div class="p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
+        <p class="text-blue-800 font-medium mb-2">
+          ✓ Your measurements have been recorded.
+        </p>
+        <p class="text-blue-700 text-sm">
+          Please contact us if you have any concerns about the measurements.
+        </p>
+      </div>
+
       <!-- Basic -->
       <div class="border rounded-lg p-6 bg-gray-50">
         <h2 class="text-xl font-semibold mb-4">Basic</h2>
@@ -76,15 +86,7 @@
         </div>
       {/if}
 
-      <!-- Update Button -->
-      <div class="pt-4">
-        <button
-          on:click={goToEdit}
-          class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition"
-        >
-          Update Measurements
-        </button>
-      </div>
+      <!-- 不再显示 Update Measurements 按钮 -->
 
     </div>
   {/if}

@@ -15,7 +15,8 @@ class MeasurementsDAO {
         m.*,
         COALESCE(c.full_name, gm.full_name) as customer_name,
         NULL as gender,
-        m.measured_at as updated_at
+        m.measured_at as updated_at,
+        m.measured_at as created_at
       FROM measurements m
       LEFT JOIN customers c ON m.customer_id = c.id
       LEFT JOIN group_members gm ON m.group_member_id = gm.id
@@ -26,7 +27,8 @@ class MeasurementsDAO {
   // 获取某团体成员的全部量体记录
   static getByGroupMember(groupMemberId) {
     return db.prepare(`
-      SELECT *
+      SELECT *,
+             measured_at AS created_at
       FROM measurements
       WHERE group_member_id = ?
       ORDER BY measured_at DESC
@@ -38,7 +40,8 @@ class MeasurementsDAO {
     return db.prepare(`
       SELECT
         m.*,
-        COALESCE(c.full_name, gm.full_name) as customer_name
+        COALESCE(c.full_name, gm.full_name) as customer_name,
+        m.measured_at AS created_at
       FROM measurements m
       LEFT JOIN customers c ON m.customer_id = c.id
       LEFT JOIN group_members gm ON m.group_member_id = gm.id

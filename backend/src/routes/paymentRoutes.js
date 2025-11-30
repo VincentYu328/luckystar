@@ -22,6 +22,24 @@ router.get(
 );
 
 // =========================================
+// 获取单个付款详情
+// GET /api/payments/id/:id
+// =========================================
+router.get(
+  '/id/:id',
+  requireAuth,
+  requirePermission('orders.view'),
+  (req, res) => {
+    try {
+      const payment = PaymentService.getPaymentById(Number(req.params.id));
+      res.json({ payment });
+    } catch (err) {
+      res.status(404).json({ error: err.message });
+    }
+  }
+);
+
+// =========================================
 // 获取订单的付款记录
 // GET /api/payments/:orderType/:orderId
 // =========================================

@@ -183,7 +183,8 @@ class CustomersDAO {
                 inseam,
                 notes,
                 measured_by,
-                measured_at
+                measured_at,
+                measured_at AS created_at
             FROM measurements
             WHERE customer_id = ?
             ORDER BY measured_at DESC
@@ -201,12 +202,9 @@ class CustomersDAO {
         const keys = Object.keys(fields).filter(k => allowed.includes(k));
         if (!keys.length) return;
 
-        const setClause = keys.map(k => `${k} = ?`).join(', ');
-        const params = keys.map(k => fields[k]);
-
-        // 先找到最新的 measurement id
+        // 先找到最新的 measurement
         const latest = db.prepare(`
-            SELECT id FROM measurements
+            SELECT id, is_locked FROM measurements
             WHERE customer_id = ?
             ORDER BY measured_at DESC
             LIMIT 1
@@ -217,11 +215,20 @@ class CustomersDAO {
             return { changes: 0 };
         }
 
+        // 如果已经锁定，不允许更新
+        if (latest.is_locked === 1) {
+            console.log(`Measurement is locked for customer ${customerId}, update denied.`);
+            return { changes: 0 };
+        }
+
+        const setClause = keys.map(k => `${k} = ?`).join(', ');
+        const params = keys.map(k => fields[k]);
         params.push(latest.id);
 
+        // 更新并锁定
         return db.prepare(`
             UPDATE measurements
-            SET ${setClause}
+            SET ${setClause}, is_locked = 1
             WHERE id = ?
         `).run(...params);
     }
@@ -242,8 +249,9 @@ class CustomersDAO {
                 inseam,
                 notes,
                 measured_by,
-                measured_at
-            ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                measured_at,
+                is_locked
+            ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1)
         `).run(
             customerId,
             fields.source || 'customer_portal',

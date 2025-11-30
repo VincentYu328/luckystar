@@ -9,26 +9,41 @@ class PaymentsDAO {
 
   static getById(id) {
     return db.prepare(`
-      SELECT *
-      FROM payments
-      WHERE id = ?
+      SELECT
+        p.*,
+        u_received.full_name AS received_by_name,
+        u_verified.full_name AS verified_by_name
+      FROM payments p
+      LEFT JOIN users u_received ON p.received_by = u_received.id
+      LEFT JOIN users u_verified ON p.verified_by = u_verified.id
+      WHERE p.id = ?
     `).get(id);
   }
 
   static getByOrder(orderType, orderId) {
     return db.prepare(`
-      SELECT *
-      FROM payments
-      WHERE order_type = ? AND order_id = ?
-      ORDER BY payment_date ASC
+      SELECT
+        p.*,
+        u_received.full_name AS received_by_name,
+        u_verified.full_name AS verified_by_name
+      FROM payments p
+      LEFT JOIN users u_received ON p.received_by = u_received.id
+      LEFT JOIN users u_verified ON p.verified_by = u_verified.id
+      WHERE p.order_type = ? AND p.order_id = ?
+      ORDER BY p.payment_date ASC
     `).all(orderType, orderId);
   }
 
   static getAll() {
     return db.prepare(`
-      SELECT *
-      FROM payments
-      ORDER BY payment_date DESC
+      SELECT
+        p.*,
+        u_received.full_name AS received_by_name,
+        u_verified.full_name AS verified_by_name
+      FROM payments p
+      LEFT JOIN users u_received ON p.received_by = u_received.id
+      LEFT JOIN users u_verified ON p.verified_by = u_verified.id
+      ORDER BY p.payment_date DESC
     `).all();
   }
 
