@@ -191,118 +191,8 @@ router.get('/me/orders/:id', requireCustomerAuth, async (req, res) => {
 // NOTE: The rest of the routes below assume the middleware is handling staff/customer roles appropriately
 // The original code was using 'requireAuth' (Staff JWT) for all routes below.
 
-router.get(
-    '/',
-    // Assuming 'requireAuth' is the staff check
-    requireAuth, 
-    requirePermission('customers.view'),
-    (req, res) => {
-        try {
-            const rawKeyword = req.query.keyword;
-            const keyword = rawKeyword ? String(rawKeyword).trim() : '';
-
-            console.log('[Backend CustomerRoutes] GET / - Processed keyword:', keyword);
-
-            let customers;
-
-            if (keyword.length > 0) {
-                customers = CustomerService.search(keyword);
-            } else {
-                customers = CustomerService.getAllCustomers();
-            }
-
-            res.json({ count: customers.length, customers });
-        } catch (error) {
-            console.error('Error fetching customers:', error);
-            res.status(500).json({ success: false, error: error.message });
-        }
-    }
-);
-
-router.get('/:id', requireAuth, async (req, res) => {
-    // Complex authorization logic relies on middleware setup and isSelf helper
-    if (req.user.role !== 'customer') {
-        requirePermission('customers.view')(req, res, () => {});
-        if (res.headersSent) return;
-    }
-
-    if (req.user.role === 'customer' && !isSelf(req)) {
-        return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    try {
-        const customer = await CustomerService.getCustomerById(Number(req.params.id));
-        res.json({ customer });
-    } catch (err) {
-        console.error(`Error getting customer ID ${req.params.id}:`, err);
-        res.status(404).json({ error: err.message });
-    }
-});
-
-// ... (rest of the file: POST /, PUT /:id, DELETE /:id, Group Orders, Group Members, Customer Measurements remain unchanged)
-
-router.post(
-    '/',
-    requireAuth,
-    requirePermission('customers.create'),
-    async (req, res) => {
-        try {
-            const result = await CustomerService.createCustomer(req.user.id, req.body);
-            res.status(201).json(result);
-        } catch (err) {
-            console.error("Error creating customer:", err);
-            res.status(400).json({ error: err.message });
-        }
-    }
-);
-
-router.put('/:id', requireAuth, async (req, res) => {
-    if (req.user.role !== 'customer') {
-        requirePermission('customers.update')(req, res, () => {});
-        if (res.headersSent) return;
-    }
-
-    if (req.user.role === 'customer' && !isSelf(req)) {
-        return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    try {
-        const result = await CustomerService.updateCustomer(
-            req.user.id,
-            Number(req.params.id),
-            req.body
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(`Error updating customer ID ${req.params.id}:`, err);
-        res.status(400).json({ error: err.message });
-    }
-});
-
-router.delete('/:id', requireAuth, async (req, res) => {
-    if (req.user.role !== 'customer') {
-        requirePermission('customers.update')(req, res, () => {});
-        if (res.headersSent) return;
-    }
-
-    if (req.user.role === 'customer') {
-        return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    try {
-        const result = await CustomerService.deleteCustomer(
-            req.user.id,
-            Number(req.params.id)
-        );
-        res.json(result);
-    } catch (err) {
-        console.error(`Error deleting customer ID ${req.params.id}:`, err);
-        res.status(400).json({ error: err.message });
-    }
-});
-
 /* ======================================================
-    Group Orders
+    Group Orders (MUST come before /:id routes!)
 ====================================================== */
 
 // GET /api/customers/group-orders - List all group orders (must come before /:id/group-orders)
@@ -312,33 +202,16 @@ router.get(
     requirePermission('customers.view'),
     async (req, res) => {
         try {
+            console.log('🔍 [Route] GET /customers/group-orders - Staff user:', req.user);
             const orders = CustomerService.getAllGroupOrders();
+            console.log('✅ [Route] Found', orders.length, 'group orders');
             res.json({ count: orders.length, orders });
         } catch (err) {
-            console.error('Error fetching all group orders:', err);
+            console.error('❌ [Route] Error fetching all group orders:', err);
             res.status(500).json({ error: err.message });
         }
     }
 );
-
-router.get('/:id/group-orders', requireAuth, async (req, res) => {
-    if (req.user.role !== 'customer') {
-        requirePermission('customers.view')(req, res, () => {});
-        if (res.headersSent) return;
-    }
-
-    if (req.user.role === 'customer' && !isSelf(req)) {
-        return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    try {
-        const orders = await CustomerService.getGroupOrdersByCustomer(Number(req.params.id));
-        res.json({ count: orders.length, orders });
-    } catch (err) {
-        console.error(`Error fetching group orders for customer ID ${req.params.id}:`, err);
-        res.status(400).json({ error: err.message });
-    }
-});
 
 router.get(
     '/group-orders/:orderId',
@@ -491,6 +364,74 @@ router.delete(
 );
 
 /* ======================================================
+    General Customer Routes (MUST come after specific routes!)
+====================================================== */
+
+router.get(
+    '/',
+    // Assuming 'requireAuth' is the staff check
+    requireAuth,
+    requirePermission('customers.view'),
+    (req, res) => {
+        try {
+            const rawKeyword = req.query.keyword;
+            const keyword = rawKeyword ? String(rawKeyword).trim() : '';
+
+            console.log('[Backend CustomerRoutes] GET / - Processed keyword:', keyword);
+
+            let customers;
+
+            if (keyword.length > 0) {
+                customers = CustomerService.search(keyword);
+            } else {
+                customers = CustomerService.getAllCustomers();
+            }
+
+            res.json({ count: customers.length, customers });
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+);
+
+router.post(
+    '/',
+    requireAuth,
+    requirePermission('customers.create'),
+    async (req, res) => {
+        try {
+            const result = await CustomerService.createCustomer(req.user.id, req.body);
+            res.status(201).json(result);
+        } catch (err) {
+            console.error("Error creating customer:", err);
+            res.status(400).json({ error: err.message });
+        }
+    }
+);
+
+router.get('/:id/group-orders', requireAuth, async (req, res) => {
+    console.log('🔍 [Route] GET /customers/:id/group-orders - ID:', req.params.id, 'User:', req.user);
+
+    if (req.user.role !== 'customer') {
+        requirePermission('customers.view')(req, res, () => {});
+        if (res.headersSent) return;
+    }
+
+    if (req.user.role === 'customer' && !isSelf(req)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
+        const orders = await CustomerService.getGroupOrdersByCustomer(Number(req.params.id));
+        res.json({ count: orders.length, orders });
+    } catch (err) {
+        console.error(`❌ [Route] Error fetching group orders for customer ID ${req.params.id}:`, err);
+        res.status(400).json({ error: err.message });
+    }
+});
+
+/* ======================================================
     Customer Measurements (后台 staff 管理客户量体记录)
 ====================================================== */
 router.get(
@@ -527,5 +468,70 @@ router.post(
         }
     }
 );
+
+router.get('/:id', requireAuth, async (req, res) => {
+    // Complex authorization logic relies on middleware setup and isSelf helper
+    if (req.user.role !== 'customer') {
+        requirePermission('customers.view')(req, res, () => {});
+        if (res.headersSent) return;
+    }
+
+    if (req.user.role === 'customer' && !isSelf(req)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
+        const customer = await CustomerService.getCustomerById(Number(req.params.id));
+        res.json({ customer });
+    } catch (err) {
+        console.error(`Error getting customer ID ${req.params.id}:`, err);
+        res.status(404).json({ error: err.message });
+    }
+});
+
+router.put('/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'customer') {
+        requirePermission('customers.update')(req, res, () => {});
+        if (res.headersSent) return;
+    }
+
+    if (req.user.role === 'customer' && !isSelf(req)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
+        const result = await CustomerService.updateCustomer(
+            req.user.id,
+            Number(req.params.id),
+            req.body
+        );
+        res.json(result);
+    } catch (err) {
+        console.error(`Error updating customer ID ${req.params.id}:`, err);
+        res.status(400).json({ error: err.message });
+    }
+});
+
+router.delete('/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'customer') {
+        requirePermission('customers.update')(req, res, () => {});
+        if (res.headersSent) return;
+    }
+
+    if (req.user.role === 'customer') {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    try {
+        const result = await CustomerService.deleteCustomer(
+            req.user.id,
+            Number(req.params.id)
+        );
+        res.json(result);
+    } catch (err) {
+        console.error(`Error deleting customer ID ${req.params.id}:`, err);
+        res.status(400).json({ error: err.message });
+    }
+});
 
 export default router;

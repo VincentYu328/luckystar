@@ -54,7 +54,10 @@ router.get(
       const memberId = Number(req.params.memberId);
       console.log('[GET /measurements/group-member/:memberId] memberId:', memberId);
 
-      const measurement = MeasurementsDAO.getByGroupMember(memberId);
+      // getByGroupMember returns an array, we want the most recent one (first)
+      const measurements = MeasurementsDAO.getByGroupMember(memberId);
+      const measurement = measurements && measurements.length > 0 ? measurements[0] : null;
+
       console.log('[GET /measurements/group-member/:memberId] measurement:', measurement);
 
       res.json(measurement || {});
@@ -83,14 +86,15 @@ router.post(
       console.log('[POST /measurements/group-member/:memberId] memberId:', memberId);
       console.log('[POST /measurements/group-member/:memberId] body:', req.body);
 
-      // 检查是否已存在量体记录
-      const existing = MeasurementsDAO.getByGroupMember(memberId);
+      // 检查是否已存在量体记录 (getByGroupMember returns an array)
+      const existingList = MeasurementsDAO.getByGroupMember(memberId);
+      const existing = existingList && existingList.length > 0 ? existingList[0] : null;
 
       let result;
       if (existing) {
         // 更新现有记录
         result = MeasurementService.updateMeasurement(adminId, existing.id, req.body);
-        console.log('[POST /measurements/group-member/:memberId] Updated existing measurement');
+        console.log('[POST /measurements/group-member/:memberId] Updated existing measurement ID:', existing.id);
       } else {
         // 创建新记录
         const payload = {

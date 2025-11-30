@@ -21,9 +21,30 @@ export async function load({ locals, params, fetch, cookies }) {
             throw error(404, 'Group order not found');
         }
 
+        const members = membersRes.members ?? [];
+
+        // 为每个成员获取量体数据
+        const membersWithMeasurements = await Promise.all(
+            members.map(async (member) => {
+                try {
+                    const measurement = await api.measurements.getByGroupMember(member.id, { fetch, cookies });
+                    return {
+                        ...member,
+                        hasMeasurement: !!measurement && Object.keys(measurement).length > 0
+                    };
+                } catch (err) {
+                    // 如果没有量体数据，标记为false
+                    return {
+                        ...member,
+                        hasMeasurement: false
+                    };
+                }
+            })
+        );
+
         return {
             order: order,
-            members: membersRes.members ?? []
+            members: membersWithMeasurements
         };
     } catch (err) {
         console.error('[group-orders/[id]] Error loading:', err);
@@ -67,6 +88,31 @@ export const actions = {
             if (err.status === 303) throw err;
             return {
                 error: err.message || 'Failed to update group order.'
+            };
+        }
+    },
+
+    deleteMember: async ({ locals, request, params, fetch, cookies }) => {
+        const user = locals.authUser;
+
+        if (!user || user.type !== 'staff') {
+            throw error(403, 'Forbidden');
+        }
+
+        const groupId = Number(params.id);
+        const form = await request.formData();
+        const memberId = Number(form.get('memberId'));
+
+        try {
+            await api.groupOrders.deleteMember(memberId, { fetch, cookies });
+
+            // 刷新详情页
+            throw redirect(303, `/admin/group-orders/${groupId}`);
+        } catch (err) {
+            if (err.status === 303) throw err;
+            console.error('[deleteMember] Error:', err);
+            return {
+                error: err.message || 'Failed to delete group member.'
             };
         }
     }

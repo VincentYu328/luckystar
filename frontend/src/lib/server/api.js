@@ -51,11 +51,16 @@ async function requestWithContext(method, path, data = null, extraHeaders = {}, 
         return res;
     }
 
+    // 先克隆响应以便在JSON解析失败时读取文本
+    const resClone = res.clone();
     let payload;
     try {
         payload = await res.json();
-    } catch {
-        payload = { error: 'Invalid JSON from backend' };
+    } catch (jsonError) {
+        // 尝试获取原始文本以便调试
+        const text = await resClone.text().catch(() => '(无法读取响应体)');
+        console.error(`[API] JSON解析失败 - ${method} ${fullPath} (${res.status}):`, text.substring(0, 500));
+        payload = { error: `Invalid JSON from backend (${res.status}): ${text.substring(0, 100)}` };
     }
 
     if (!res.ok) {
@@ -126,11 +131,15 @@ async function request(method, path, data = null, extraHeaders = {}, queryParams
     }
 
     // 5. 解析 JSON（容错）
+    const resClone = res.clone();
     let payload;
     try {
         payload = await res.json();
-    } catch {
-        payload = { error: 'Invalid JSON from backend' };
+    } catch (jsonError) {
+        // 尝试获取原始文本以便调试
+        const text = await resClone.text().catch(() => '(无法读取响应体)');
+        console.error(`[API] JSON解析失败 - ${method} ${fullPath} (${res.status}):`, text.substring(0, 500));
+        payload = { error: `Invalid JSON from backend (${res.status}): ${text.substring(0, 100)}` };
     }
 
     // 6. 统一错误处理
@@ -352,7 +361,15 @@ export const api = {
 
     // ---------------- GROUP ORDERS ----------------
     groupOrders: {
+        // For customer-facing pages (requires customer login)
         list(context = null) {
+            return context
+                ? requestWithContext('GET', '/customers/group-orders', null, {}, {}, context)
+                : request('GET', '/customers/group-orders');
+        },
+        // For admin pages (lists all group orders, requires staff auth)
+        // Note: Backend route is at /customers/group-orders with requireAuth middleware
+        listAll(context = null) {
             return context
                 ? requestWithContext('GET', '/customers/group-orders', null, {}, {}, context)
                 : request('GET', '/customers/group-orders');
@@ -431,10 +448,26 @@ export const api = {
         createGroupOrder(data) { return request('POST', '/group-orders', data); },
         updateGroupOrder(id, data) { return request('PUT', `/group-orders/${id}`, data); },
         deleteGroupOrder(id) { return request('DELETE', `/group-orders/${id}`); },
-        groupMembers(orderId) { return request('GET', `/group-orders/${orderId}/members`); },
-        createGroupMember(orderId, data) { return request('POST', `/group-orders/${orderId}/members`, data); },
-        updateGroupMember(id, data) { return request('PUT', `/group-members/${id}`, data); },
-        deleteGroupMember(id) { return request('DELETE', `/group-members/${id}`); },
+        groupMembers(orderId, context = null) {
+            return context
+                ? requestWithContext('GET', `/group-orders/${orderId}/members`, null, {}, {}, context)
+                : request('GET', `/group-orders/${orderId}/members`);
+        },
+        createGroupMember(orderId, data, context = null) {
+            return context
+                ? requestWithContext('POST', `/group-orders/${orderId}/members`, data, {}, {}, context)
+                : request('POST', `/group-orders/${orderId}/members`, data);
+        },
+        updateGroupMember(id, data, context = null) {
+            return context
+                ? requestWithContext('PUT', `/customers/group-members/${id}`, data, {}, {}, context)
+                : request('PUT', `/customers/group-members/${id}`, data);
+        },
+        deleteGroupMember(id, context = null) {
+            return context
+                ? requestWithContext('DELETE', `/customers/group-members/${id}`, null, {}, {}, context)
+                : request('DELETE', `/customers/group-members/${id}`);
+        },
     },
 
     // ---------------- CUSTOMER ORDERS ----------------

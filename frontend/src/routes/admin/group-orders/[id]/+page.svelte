@@ -1,8 +1,19 @@
 <script>
     export let data;
+    export let form;
 
     const order = data.order;
     const members = data.members;
+
+    let deleteConfirm = { show: false, memberId: null, memberName: '' };
+
+    function confirmDelete(memberId, memberName) {
+        deleteConfirm = { show: true, memberId, memberName };
+    }
+
+    function cancelDelete() {
+        deleteConfirm = { show: false, memberId: null, memberName: '' };
+    }
 </script>
 
 <div class="space-y-8 p-4">
@@ -27,6 +38,13 @@
             </a>
         </div>
     </div>
+
+    <!-- Error Message -->
+    {#if form?.error}
+        <div class="p-4 rounded-lg bg-red-100 text-red-800 border border-red-300">
+            ❌ {form.error}
+        </div>
+    {/if}
 
     <!-- 订单信息卡片 -->
     <div class="bg-white border rounded-lg p-6 space-y-4">
@@ -139,18 +157,27 @@
                             <td class="p-3 text-gray-600">{member.note || '—'}</td>
                             <td class="p-3">
                                 <div class="flex justify-end gap-2">
+                                    {#if member.hasMeasurement}
+                                        <a
+                                            href="/admin/group-orders/{order.id}/members/{member.id}/measurement/view"
+                                            class="text-green-600 hover:underline"
+                                        >
+                                            View / 查看
+                                        </a>
+                                    {/if}
                                     <a
                                         href="/admin/group-orders/{order.id}/members/{member.id}/measurement"
                                         class="text-blue-600 hover:underline"
                                     >
-                                        Measurements / 量体
+                                        {member.hasMeasurement ? 'Edit / 编辑' : 'Add / 添加'}
                                     </a>
-                                    <a
-                                        href="/admin/group-orders/{order.id}/members/{member.id}/edit"
-                                        class="text-gray-600 hover:underline"
+                                    <button
+                                        type="button"
+                                        on:click={() => confirmDelete(member.id, member.full_name)}
+                                        class="text-red-600 hover:underline"
                                     >
-                                        Edit / 编辑
-                                    </a>
+                                        Delete / 删除
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -161,3 +188,39 @@
     </div>
 
 </div>
+
+<!-- Delete Confirmation Modal -->
+{#if deleteConfirm.show}
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 text-gray-900">
+                Confirm Delete（确认删除）
+            </h2>
+            <p class="mb-6 text-gray-700">
+                Are you sure you want to delete member <strong>{deleteConfirm.memberName}</strong> from this group order?
+                <br /><br />
+                确定要从团体订单中删除成员 <strong>{deleteConfirm.memberName}</strong> 吗？
+                <br /><br />
+                <span class="text-red-600 text-sm">
+                    ⚠️ This action cannot be undone. The member's measurement data will also be deleted.
+                </span>
+            </p>
+            <form method="POST" action="?/deleteMember" class="flex gap-3">
+                <input type="hidden" name="memberId" value={deleteConfirm.memberId} />
+                <button
+                    type="submit"
+                    class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                    Yes, Delete（确认删除）
+                </button>
+                <button
+                    type="button"
+                    on:click={cancelDelete}
+                    class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                    Cancel（取消）
+                </button>
+            </form>
+        </div>
+    </div>
+{/if}

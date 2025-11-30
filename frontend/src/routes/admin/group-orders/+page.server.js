@@ -11,8 +11,8 @@ export async function load({ locals, url, fetch, cookies }) {
     }
 
     try {
-        // 🔥 修复：使用统一的 api 对象，并传入 context
-        const res = await api.groupOrders.list({ fetch, cookies });
+        // 🔥 修复：使用 listAll 方法获取所有团体订单（admin 专用）
+        const res = await api.groupOrders.listAll({ fetch, cookies });
 
         console.log("[LOAD /admin/group-orders] fetched orders:", res.orders ? res.orders.length : 0);
 
