@@ -55,9 +55,8 @@ export async function load({ params, url, locals }) {
         throw redirect(303, `/admin/retail-orders?error=${encodeURIComponent('Failed to fetch order detail: ' + err.message)}`);
     }
 }
-
 // =====================================================
-// ACTIONS (UPDATE ORDER - 原有代码保留)
+// ACTIONS (UPDATE ORDER - 增加了调试日志)
 // =====================================================
 export const actions = {
     update: async ({ locals, params, request }) => {
@@ -88,18 +87,23 @@ export const actions = {
                 notes: cleanedData.notes || null
             };
 
+            console.log(`[ACTION DEBUG] Submitting update data for order ${orderId}: ${JSON.stringify(updateData)}`); // 调试点 A
+
             const res = await api.retailOrders.update(orderId, updateData);
+
+            console.log("[ACTION DEBUG] API Response after update:", JSON.stringify(res)); // 调试点 B
 
             if (res.success) {
                 // 更新成功，重定向回查看模式
                 throw redirect(303, `/admin/retail-orders/${orderId}?updateSuccess=true`);
             } else {
+                // API 返回失败，重定向回编辑模式并带上错误信息
                 throw redirect(303, `/admin/retail-orders/${orderId}?edit=true&error=${encodeURIComponent(res.error || 'Update failed')}`);
             }
 
         } catch (err) {
-            console.error("[ACTION /retail-orders/[id]?/update] Error:", err.message);
-            throw redirect(303, `/admin/retail-orders/${orderId}?edit=true&error=${encodeURIComponent(err.message || 'Update failed')}`);
+            console.error("[ACTION /retail-orders/[id]?/update] Runtime Error:", err.message);
+            throw redirect(303, `/admin/retail-orders/${orderId}?edit=true&error=${encodeURIComponent(err.message || 'Update failed due to runtime error')}`);
         }
     }
 };

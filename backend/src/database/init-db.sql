@@ -5,8 +5,8 @@ PRAGMA foreign_keys = ON;
 ----------------------------------------------------------------------
 
 CREATE TABLE system_config (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
+  key     TEXT PRIMARY KEY,
+  value   TEXT NOT NULL
 );
 INSERT INTO system_config (key, value) VALUES ('mode', 'dev');
 
@@ -16,9 +16,9 @@ INSERT INTO system_config (key, value) VALUES ('mode', 'dev');
 ----------------------------------------------------------------------
 
 CREATE TABLE roles (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT NOT NULL UNIQUE,
-  description TEXT
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT NOT NULL UNIQUE,
+  description   TEXT
 );
 
 INSERT INTO roles (name, description) VALUES
@@ -51,11 +51,11 @@ WHERE p.name='manager' AND c.name='sales';
 ----------------------------------------------------------------------
 
 CREATE TABLE positions (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT NOT NULL UNIQUE,
-  description TEXT,
-  role_id     INTEGER NOT NULL,
-  sort_order  INTEGER NOT NULL DEFAULT 100,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT NOT NULL UNIQUE,
+  description   TEXT,
+  role_id       INTEGER NOT NULL,
+  sort_order    INTEGER NOT NULL DEFAULT 100,
   FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
@@ -96,13 +96,13 @@ CREATE INDEX idx_users_email ON users(email);
 ----------------------------------------------------------------------
 
 CREATE TABLE audit_logs (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id      INTEGER,
-  action       TEXT NOT NULL,
-  target_type  TEXT NOT NULL,
-  target_id    INTEGER,
-  details      TEXT,
-  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER,
+  action        TEXT NOT NULL,
+  target_type   TEXT NOT NULL,
+  target_id     INTEGER,
+  details       TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -112,19 +112,19 @@ CREATE TABLE audit_logs (
 ----------------------------------------------------------------------
 
 CREATE TABLE permission_modules (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  code        TEXT NOT NULL UNIQUE,
-  name        TEXT NOT NULL,
-  description TEXT
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  code          TEXT NOT NULL UNIQUE,
+  name          TEXT NOT NULL,
+  description   TEXT
 );
 
 INSERT INTO permission_modules (code, name, description) VALUES
-('staff',       '员工与角色管理',   '管理内部员工账号、角色与权限'),
-('products',    '产品管理',         '管理布料与成衣信息'),
-('inventory',   '库存与进货',       '管理库存与进货单'),
-('orders',      '订单管理',         '零售与团体订单管理'),
-('customers',   '客户与团体',       '客户信息（含团体 leader 与成员）'),
-('reports',     '报表与统计',       '销售、库存、订单报表');
+('staff',     '员工与角色管理',   '管理内部员工账号、角色与权限'),
+('products',  '产品管理',         '管理布料与成衣信息'),
+('inventory', '库存与进货',       '管理库存与进货单'),
+('orders',    '订单管理',         '零售与团体订单管理'),
+('customers', '客户与团体',       '客户信息（含团体 leader 与成员）'),
+('reports',   '报表与统计',       '销售、库存、订单报表');
 
 
 ----------------------------------------------------------------------
@@ -132,11 +132,11 @@ INSERT INTO permission_modules (code, name, description) VALUES
 ----------------------------------------------------------------------
 
 CREATE TABLE permissions (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  module_id   INTEGER NOT NULL,
-  code        TEXT NOT NULL UNIQUE,
-  name        TEXT NOT NULL,
-  description TEXT,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  module_id     INTEGER NOT NULL,
+  code          TEXT NOT NULL UNIQUE,
+  name          TEXT NOT NULL,
+  description   TEXT,
   FOREIGN KEY (module_id) REFERENCES permission_modules(id)
 );
 
@@ -164,11 +164,12 @@ INSERT INTO permissions (module_id, code, name, description) VALUES
 ((SELECT id FROM permission_modules WHERE code='inventory'), 'inventory.adjust','Adjust Inventory','库存调整');
 
 -- Orders
-INSERT INTO permissions (module_id, code, name, description) VALUES
+INSERT OR IGNORE INTO permissions (module_id, code, name, description) VALUES
 ((SELECT id FROM permission_modules WHERE code='orders'), 'orders.view','View Orders','查看订单'),
 ((SELECT id FROM permission_modules WHERE code='orders'), 'orders.create','Create Order','创建订单'),
 ((SELECT id FROM permission_modules WHERE code='orders'), 'orders.update','Update Order','更新订单'),
-((SELECT id FROM permission_modules WHERE code='orders'), 'orders.cancel','Cancel Order','取消订单');
+((SELECT id FROM permission_modules WHERE code='orders'), 'orders.cancel','Cancel Order','取消订单'),
+((SELECT id FROM permission_modules WHERE code='orders'), 'orders.delete','Delete Order','删除订单');
 
 -- Customers
 INSERT INTO permissions (module_id, code, name, description) VALUES
@@ -214,20 +215,20 @@ FROM permissions p WHERE p.code IN (
 ----------------------------------------------------------------------
 
 CREATE TABLE customers (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  full_name     TEXT NOT NULL,
-  phone         TEXT NOT NULL,
-  email         TEXT NOT NULL UNIQUE,
-  address       TEXT,
-  wechat        TEXT,
-  whatsapp      TEXT,
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  full_name       TEXT NOT NULL,
+  phone           TEXT NOT NULL,
+  email           TEXT NOT NULL UNIQUE,
+  address         TEXT,
+  wechat          TEXT,
+  whatsapp        TEXT,
 
-  password_hash TEXT,                      -- ⭐ 新增：前台顾客需要密码登录
-  is_active     INTEGER NOT NULL DEFAULT 1, -- ⭐ 新增：账号是否可用（默认启用）
+  password_hash   TEXT,                -- ⭐ 新增：前台顾客需要密码登录
+  is_active       INTEGER NOT NULL DEFAULT 1, -- ⭐ 新增：账号是否可用（默认启用）
 
-  type          TEXT NOT NULL DEFAULT 'retail',
-  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  type            TEXT NOT NULL DEFAULT 'retail',
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX idx_customers_email ON customers(email);
 
@@ -237,19 +238,19 @@ CREATE INDEX idx_customers_email ON customers(email);
 ----------------------------------------------------------------------
 
 CREATE TABLE group_orders (
-  id               INTEGER PRIMARY KEY AUTOINCREMENT,
-  leader_id        INTEGER NOT NULL,
-  leader_name      TEXT NOT NULL,
-  leader_phone     TEXT NOT NULL,
-  leader_email     TEXT NOT NULL,
-  group_name       TEXT NOT NULL,
-  event_name       TEXT,
-  expected_members INTEGER,
-  fabric_selected  TEXT NOT NULL,
-  event_start      TEXT,
-  event_end        TEXT,
-  notes            TEXT,
-  created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  leader_id         INTEGER NOT NULL,
+  leader_name       TEXT NOT NULL,
+  leader_phone      TEXT NOT NULL,
+  leader_email      TEXT NOT NULL,
+  group_name        TEXT NOT NULL,
+  event_name        TEXT,
+  expected_members  INTEGER,
+  fabric_selected   TEXT NOT NULL,
+  event_start       TEXT,
+  event_end         TEXT,
+  notes             TEXT,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (leader_id) REFERENCES customers(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_group_orders_leader ON group_orders(leader_id);
@@ -273,12 +274,12 @@ CREATE INDEX idx_group_members_order ON group_members(group_order_id);
 ----------------------------------------------------------------------
 
 CREATE TABLE product_categories (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  code        TEXT NOT NULL UNIQUE,
-  name        TEXT NOT NULL,
-  parent_id   INTEGER,
-  sort_order  INTEGER NOT NULL DEFAULT 100,
-  is_active   INTEGER NOT NULL DEFAULT 1,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  code          TEXT NOT NULL UNIQUE,
+  name          TEXT NOT NULL,
+  parent_id     INTEGER,
+  sort_order    INTEGER NOT NULL DEFAULT 100,
+  is_active     INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (parent_id) REFERENCES product_categories(id)
 );
 
@@ -297,26 +298,26 @@ INSERT INTO product_categories (code, name, parent_id, sort_order) VALUES
 ----------------------------------------------------------------------
 
 CREATE TABLE products (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  sku           TEXT NOT NULL UNIQUE,
-  name          TEXT NOT NULL,
-  description   TEXT,
-  category_id   INTEGER NOT NULL,
-  product_type  TEXT NOT NULL,   -- 'fabric' | 'garment'
-  material      TEXT,
-  pattern       TEXT,
-  width_cm      REAL,
-  fabric_id     INTEGER,
-  style         TEXT,
-  gender        TEXT,
-  size_label    TEXT,
-  color         TEXT,
-  unit          TEXT NOT NULL DEFAULT 'piece',
-  base_price    REAL NOT NULL,
-  cost_price    REAL,
-  is_active     INTEGER NOT NULL DEFAULT 1,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  sku             TEXT NOT NULL UNIQUE,
+  name            TEXT NOT NULL,
+  description     TEXT,
+  category_id     INTEGER NOT NULL,
+  product_type    TEXT NOT NULL,   -- 'fabric' | 'garment'
+  material        TEXT,
+  pattern         TEXT,
+  width_cm        REAL,
+  fabric_id       INTEGER,
+  style           TEXT,
+  gender          TEXT,
+  size_label      TEXT,
+  color           TEXT,
+  unit            TEXT NOT NULL DEFAULT 'piece',
+  base_price      REAL NOT NULL,
+  cost_price      REAL,
+  is_active       INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (category_id) REFERENCES product_categories(id),
   FOREIGN KEY (fabric_id)   REFERENCES products(id)
 );
@@ -347,7 +348,29 @@ CREATE INDEX idx_fabric_incoming_date ON fabric_incoming(received_at);
 
 
 ----------------------------------------------------------------------
--- 14. Fabric Usage（裁剪用料）
+-- 14. Garment Incoming（成衣进货/生产入库）
+----------------------------------------------------------------------
+
+CREATE TABLE garment_incoming (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  garment_id      INTEGER NOT NULL,
+  quantity        REAL NOT NULL,
+  unit_cost       REAL,          -- 成本价，用于利润计算
+  batch_id        TEXT,          -- 生产批次或采购批次
+  source_type     TEXT NOT NULL DEFAULT 'production', -- 'production' 或 'purchase'
+  source_reference TEXT,          -- 对应工单号或采购发票号
+  received_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  created_by      INTEGER,
+  notes           TEXT,
+  FOREIGN KEY (garment_id) REFERENCES products(id),
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+CREATE INDEX idx_garment_incoming_garment ON garment_incoming(garment_id);
+CREATE INDEX idx_garment_incoming_date ON garment_incoming(received_at);
+
+
+----------------------------------------------------------------------
+-- 15. Fabric Usage（裁剪用料）
 ----------------------------------------------------------------------
 
 CREATE TABLE garment_fabric_usage (
@@ -371,7 +394,7 @@ CREATE INDEX idx_fabric_usage_date ON garment_fabric_usage(used_at);
 
 
 ----------------------------------------------------------------------
--- 15. Fabric 类型强制触发器（业务安全）
+-- 16. Product 类型强制触发器（业务安全）
 ----------------------------------------------------------------------
 
 CREATE TRIGGER trg_fabric_incoming_only_fabric
@@ -380,6 +403,14 @@ FOR EACH ROW
 WHEN (SELECT product_type FROM products WHERE id = NEW.fabric_id) != 'fabric'
 BEGIN
   SELECT RAISE(ABORT,'fabric_incoming.fabric_id must reference fabric');
+END;
+
+CREATE TRIGGER trg_garment_incoming_only_garment
+BEFORE INSERT ON garment_incoming
+FOR EACH ROW
+WHEN (SELECT product_type FROM products WHERE id = NEW.garment_id) != 'garment'
+BEGIN
+  SELECT RAISE(ABORT,'garment_incoming.garment_id must reference garment');
 END;
 
 CREATE TRIGGER trg_fabric_usage_only_fabric
@@ -401,69 +432,69 @@ END;
 
 
 ----------------------------------------------------------------------
--- 16. Product Images
+-- 17. Product Images
 ----------------------------------------------------------------------
 
 CREATE TABLE product_images (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  product_id  INTEGER NOT NULL,
-  url         TEXT NOT NULL,
-  sort_order  INTEGER NOT NULL DEFAULT 1,
-  is_primary  INTEGER NOT NULL DEFAULT 0,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id    INTEGER NOT NULL,
+  url           TEXT NOT NULL,
+  sort_order    INTEGER NOT NULL DEFAULT 1,
+  is_primary    INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
 
 ----------------------------------------------------------------------
--- 17. Size Charts / Items
+-- 18. Size Charts / Items
 ----------------------------------------------------------------------
 
 CREATE TABLE size_charts (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT NOT NULL,
-  gender      TEXT,
-  category_id INTEGER,
-  notes       TEXT,
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT NOT NULL,
+  gender        TEXT,
+  category_id   INTEGER,
+  notes         TEXT,
   FOREIGN KEY (category_id) REFERENCES product_categories(id)
 );
 
 CREATE TABLE size_chart_items (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  chart_id      INTEGER NOT NULL,
-  size_label    TEXT NOT NULL,
-  chest         REAL,
-  waist         REAL,
-  hip           REAL,
-  height        REAL,
-  shoulder      REAL,
-  sleeve        REAL,
-  inseam        REAL,
-  length        REAL,
-  notes         TEXT,
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  chart_id        INTEGER NOT NULL,
+  size_label      TEXT NOT NULL,
+  chest           REAL,
+  waist           REAL,
+  hip             REAL,
+  height          REAL,
+  shoulder        REAL,
+  sleeve          REAL,
+  inseam          REAL,
+  length          REAL,
+  notes           TEXT,
   FOREIGN KEY(chart_id) REFERENCES size_charts(id) ON DELETE CASCADE
 );
 
 
 ----------------------------------------------------------------------
--- 18. Measurements
+-- 19. Measurements
 ----------------------------------------------------------------------
 
 CREATE TABLE measurements (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  customer_id       INTEGER,
-  group_member_id   INTEGER,
-  source            TEXT NOT NULL DEFAULT 'staff',
-  unit              TEXT NOT NULL DEFAULT 'cm',
-  height            REAL,
-  chest             REAL,
-  waist             REAL,
-  hip               REAL,
-  shoulder_width    REAL,
-  sleeve_length     REAL,
-  inseam            REAL,
-  notes             TEXT,
-  measured_by       INTEGER,
-  measured_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id         INTEGER,
+  group_member_id     INTEGER,
+  source              TEXT NOT NULL DEFAULT 'staff',
+  unit                TEXT NOT NULL DEFAULT 'cm',
+  height              REAL,
+  chest               REAL,
+  waist               REAL,
+  hip                 REAL,
+  shoulder_width      REAL,
+  sleeve_length       REAL,
+  inseam              REAL,
+  notes               TEXT,
+  measured_by         INTEGER,
+  measured_at         TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
   FOREIGN KEY (group_member_id) REFERENCES group_members(id) ON DELETE CASCADE,
   FOREIGN KEY (measured_by) REFERENCES users(id),
@@ -475,33 +506,53 @@ CREATE INDEX idx_measurements_member ON measurements(group_member_id);
 
 
 ----------------------------------------------------------------------
--- 19. Garment Inventory Table
+-- 20. Garment Inventory Table (Bulk Tracking)
 ----------------------------------------------------------------------
 
 CREATE TABLE stock_levels (
-  product_id        INTEGER PRIMARY KEY,
-  quantity_on_hand  REAL NOT NULL DEFAULT 0,
-  reorder_point     REAL,
-  last_updated      TEXT NOT NULL DEFAULT (datetime('now')),
+  product_id          INTEGER PRIMARY KEY,
+  quantity_on_hand    REAL NOT NULL DEFAULT 0,
+  reorder_point       REAL,
+  last_updated        TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
 
 ----------------------------------------------------------------------
--- 20. Inventory Transactions（唯一入口）
+-- 21. Unique Inventory Items（单个追踪/序列号管理）
+----------------------------------------------------------------------
+
+CREATE TABLE inventory_items (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id        INTEGER NOT NULL,
+    unique_code       TEXT NOT NULL UNIQUE, -- 存储唯一的条形码或序列号
+    status            TEXT NOT NULL DEFAULT 'In Stock', -- 'In Stock', 'Sold', 'Damaged', 'Reserved'
+    location_id       INTEGER, -- 可选：未来用于货位管理
+    received_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+    -- FOREIGN KEY (location_id) REFERENCES locations(id) -- 预留给未来的货位表
+);
+CREATE INDEX idx_inventory_items_product ON inventory_items(product_id);
+CREATE INDEX idx_inventory_items_code ON inventory_items(unique_code);
+
+
+----------------------------------------------------------------------
+-- 22. Inventory Transactions（唯一入口）
 ----------------------------------------------------------------------
 
 CREATE TABLE inventory_transactions (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  product_id        INTEGER NOT NULL,
-  transaction_type  TEXT NOT NULL,
-  quantity_change   REAL NOT NULL,
-  reference_type    TEXT,
-  reference_id      INTEGER,
-  reason            TEXT,
-  operated_by       INTEGER,
-  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id          INTEGER NOT NULL,
+  transaction_type    TEXT NOT NULL,
+  quantity_change     REAL NOT NULL,
+  item_id             INTEGER,        -- ⭐ 新增：如果追踪到唯一项，记录其ID
+  reference_type      TEXT,
+  reference_id        INTEGER,
+  reason              TEXT,
+  operated_by         INTEGER,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (product_id) REFERENCES products(id),
+  FOREIGN KEY (item_id)    REFERENCES inventory_items(id) ON DELETE SET NULL, -- 允许唯一项被删除
   FOREIGN KEY (operated_by) REFERENCES users(id)
 );
 
@@ -509,28 +560,28 @@ CREATE INDEX idx_inventory_trans_product ON inventory_transactions(product_id);
 
 
 ----------------------------------------------------------------------
--- 21. Retail Orders
+-- 23. Retail Orders
 ----------------------------------------------------------------------
 
 CREATE TABLE retail_orders (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  order_number      TEXT NOT NULL UNIQUE,
-  customer_id       INTEGER,
-  status            TEXT NOT NULL DEFAULT 'pending',
-  channel           TEXT NOT NULL DEFAULT 'in_store',
-  subtotal          REAL NOT NULL DEFAULT 0,
-  discount_amount   REAL NOT NULL DEFAULT 0,
-  discount_rate     REAL,
-  total_amount      REAL NOT NULL DEFAULT 0,
-  deposit_amount    REAL DEFAULT 0,
-  deposit_paid      INTEGER NOT NULL DEFAULT 0,
-  order_date        TEXT NOT NULL DEFAULT (datetime('now')),
-  due_date          TEXT,
-  confirmed_date    TEXT,
-  completed_date    TEXT,
-  created_by        INTEGER,
-  confirmed_by      INTEGER,
-  notes             TEXT,
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_number        TEXT NOT NULL UNIQUE,
+  customer_id         INTEGER,
+  status              TEXT NOT NULL DEFAULT 'pending',
+  channel             TEXT NOT NULL DEFAULT 'in_store',
+  subtotal            REAL NOT NULL DEFAULT 0,
+  discount_amount     REAL NOT NULL DEFAULT 0,
+  discount_rate       REAL,
+  total_amount        REAL NOT NULL DEFAULT 0,
+  deposit_amount      REAL DEFAULT 0,
+  deposit_paid        INTEGER NOT NULL DEFAULT 0,
+  order_date          TEXT NOT NULL DEFAULT (datetime('now')),
+  due_date            TEXT,
+  confirmed_date      TEXT,
+  completed_date      TEXT,
+  created_by          INTEGER,
+  confirmed_by        INTEGER,
+  notes               TEXT,
   FOREIGN KEY (customer_id)  REFERENCES customers(id) ON DELETE SET NULL,
   FOREIGN KEY (created_by)   REFERENCES users(id),
   FOREIGN KEY (confirmed_by) REFERENCES users(id)
@@ -541,36 +592,64 @@ CREATE INDEX idx_retail_orders_status ON retail_orders(status);
 
 
 ----------------------------------------------------------------------
--- 22. Retail Order Items
+-- 24. Retail Order Items
 ----------------------------------------------------------------------
 
 CREATE TABLE retail_order_items (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  order_id          INTEGER NOT NULL,
-  product_id        INTEGER NOT NULL,
-  quantity          REAL NOT NULL DEFAULT 1,
-  unit_price        REAL NOT NULL,
-  subtotal          REAL NOT NULL,
-  product_sku       TEXT,
-  product_name      TEXT,
-  size_label        TEXT,
-  color             TEXT,
-  notes             TEXT,
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id            INTEGER NOT NULL,
+  product_id          INTEGER NOT NULL,
+  quantity            REAL NOT NULL DEFAULT 1,
+  unique_item_id      INTEGER,      -- ⭐ 新增：如果销售唯一追踪的商品，记录 ID
+  unit_price          REAL NOT NULL,
+  subtotal            REAL NOT NULL,
+  product_sku         TEXT,
+  product_name        TEXT,
+  size_label          TEXT,
+  color               TEXT,
+  notes               TEXT,
   FOREIGN KEY (order_id)   REFERENCES retail_orders(id) ON DELETE CASCADE,
-  FOREIGN KEY (product_id) REFERENCES products(id)
+  FOREIGN KEY (product_id) REFERENCES products(id),
+  FOREIGN KEY (unique_item_id) REFERENCES inventory_items(id) ON DELETE SET NULL -- 允许唯一项被删除
 );
 CREATE INDEX idx_retail_order_items_order ON retail_order_items(order_id);
 
 
 ----------------------------------------------------------------------
--- 23. Group Order Fabrics
+-- 25. ORDER DATES TRIGGER
+----------------------------------------------------------------------
+CREATE TRIGGER trg_retail_orders_dates
+AFTER UPDATE ON retail_orders
+FOR EACH ROW
+WHEN NEW.status != OLD.status
+BEGIN
+    UPDATE retail_orders 
+    SET confirmed_date = CASE 
+        WHEN NEW.status = 'confirmed' AND OLD.status != 'confirmed' 
+        THEN datetime('now')
+        WHEN NEW.status IN ('pending', 'cancelled')
+        THEN NULL
+        ELSE confirmed_date
+    END,
+    completed_date = CASE
+        WHEN NEW.status = 'completed' AND OLD.status != 'completed'
+        THEN datetime('now')
+        WHEN NEW.status IN ('pending', 'cancelled')
+        THEN NULL
+        ELSE completed_date
+    END
+    WHERE id = NEW.id;
+END;
+
+----------------------------------------------------------------------
+-- 26. Group Order Fabrics
 ----------------------------------------------------------------------
 
 CREATE TABLE group_order_fabrics (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  group_order_id    INTEGER NOT NULL,
-  fabric_id         INTEGER NOT NULL,
-  is_primary        INTEGER NOT NULL DEFAULT 0,
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_order_id      INTEGER NOT NULL,
+  fabric_id           INTEGER NOT NULL,
+  is_primary          INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (group_order_id) REFERENCES group_orders(id) ON DELETE CASCADE,
   FOREIGN KEY (fabric_id) REFERENCES products(id)
 );
@@ -578,7 +657,7 @@ CREATE INDEX idx_group_order_fabrics_order ON group_order_fabrics(group_order_id
 
 
 ----------------------------------------------------------------------
--- 24. Payments
+-- 27. Payments
 ----------------------------------------------------------------------
 
 CREATE TABLE payments (
@@ -602,7 +681,7 @@ CREATE INDEX idx_payments_order ON payments(order_type, order_id);
 
 
 ----------------------------------------------------------------------
--- 25. Auto-update timestamp triggers
+-- 28. Auto-update timestamp triggers
 ----------------------------------------------------------------------
 
 CREATE TRIGGER trg_users_updated_at
@@ -619,37 +698,24 @@ BEGIN
   UPDATE customers SET updated_at = datetime('now') WHERE id = NEW.id;
 END;
 
-
 ----------------------------------------------------------------------
--- 26. Production Safety (block stock manipulations)
+-- 29. Production Safety (block stock manipulations)
+-- [已禁用] 修正说明：
+-- 这里的触发器会导致 "direct stock insert forbidden" 错误。
+-- 因为第 33 节的触发器需要自动写入 stock_levels 表，所以不能在这里禁止写入。
+-- 如果需要保护数据，请依赖 API 层面的权限控制，而不是数据库触发器。
 ----------------------------------------------------------------------
 
-CREATE TRIGGER trg_block_direct_stock_insert
-BEFORE INSERT ON stock_levels
-WHEN (SELECT value FROM system_config WHERE key='mode')='prod'
-BEGIN
-  SELECT RAISE(ABORT,'SECURITY: direct stock insert forbidden');
-END;
-
-CREATE TRIGGER trg_block_direct_stock_update
-BEFORE UPDATE ON stock_levels
-WHEN (SELECT value FROM system_config WHERE key='mode')='prod'
-AND NEW.quantity_on_hand != OLD.quantity_on_hand
-BEGIN
-  SELECT RAISE(ABORT,'SECURITY: direct stock update forbidden');
-END;
-
-CREATE TRIGGER trg_block_direct_stock_delete
-BEFORE DELETE ON stock_levels
-WHEN (SELECT value FROM system_config WHERE key='mode')='prod'
-BEGIN
-  SELECT RAISE(ABORT,'SECURITY: direct stock delete forbidden');
-END;
+-- DROP TRIGGER IF EXISTS trg_block_direct_stock_insert;
+-- DROP TRIGGER IF EXISTS trg_block_direct_stock_update;
+-- DROP TRIGGER IF EXISTS trg_block_direct_stock_delete;
 
 
 ----------------------------------------------------------------------
--- 27. v_stock_levels（成衣库存）
+-- 30. v_stock_levels（成衣库存视图）
 ----------------------------------------------------------------------
+
+DROP VIEW IF EXISTS v_stock_levels;
 
 CREATE VIEW v_stock_levels AS
 SELECT
@@ -668,199 +734,236 @@ FROM stock_levels sl
 JOIN products p ON p.id = sl.product_id;
 
 
-----------------------------------------------------------------------
--- 28. v_inventory_summary（成衣库存统计）
-----------------------------------------------------------------------
+-- ----------------------------------------------------------------------
+-- -- 31. v_inventory_summary（成衣库存统计视图 - 实时计算）
+-- ----------------------------------------------------------------------
 
-CREATE VIEW v_inventory_summary AS
-SELECT
-  p.id AS product_id,
-  p.sku,
-  p.name,
-  p.product_type,
-  COALESCE(sl.quantity_on_hand, 0) AS current_stock,
-  COALESCE(SUM(CASE WHEN it.transaction_type='in'  THEN it.quantity_change ELSE 0 END),0) AS total_in,
-  COALESCE(SUM(CASE WHEN it.transaction_type='out' THEN ABS(it.quantity_change) ELSE 0 END),0) AS total_out,
-  COUNT(it.id) AS transaction_count,
-  MAX(it.created_at) AS last_transaction
-FROM products p
-LEFT JOIN stock_levels sl ON sl.product_id = p.id
-LEFT JOIN inventory_transactions it ON it.product_id = p.id
-WHERE p.product_type='garment'
-GROUP BY p.id;
+-- DROP VIEW IF EXISTS v_inventory_summary;
 
+-- CREATE VIEW v_inventory_summary AS
+-- SELECT
+--   p.id AS product_id,
+--   p.sku,
+--   p.name,
+--   p.product_type,
+--   -- 优先使用 stock_levels 表中的缓存值，如果没有则为 0
+--   COALESCE(sl.quantity_on_hand, 0) AS current_stock,
+--   -- 统计总入库量
+--   COALESCE(SUM(CASE WHEN it.transaction_type='in' THEN it.quantity_change ELSE 0 END),0) AS total_in,
+--   -- 统计总出库量 (转换为正数显示)
+--   COALESCE(SUM(CASE WHEN it.transaction_type='out' THEN ABS(it.quantity_change) ELSE 0 END),0) AS total_out,
+--   -- 交易次数
+--   COUNT(it.id) AS transaction_count,
+--   -- 最后交易时间
+--   MAX(it.created_at) AS last_transaction
+-- FROM products p
+-- LEFT JOIN stock_levels sl ON sl.product_id = p.id
+-- LEFT JOIN inventory_transactions it ON it.product_id = p.id
+-- WHERE p.product_type='garment'
+-- GROUP BY p.id;
 
 ----------------------------------------------------------------------
--- 29. v_fabric_stock（布料库存：IN - OUT）
+-- 32. v_fabric_stock（布料库存视图：进货总量 - 裁剪使用总量）
 ----------------------------------------------------------------------
-
 DROP VIEW IF EXISTS v_fabric_stock;
 
 CREATE VIEW v_fabric_stock AS
 WITH incoming AS (
-  SELECT
-    fabric_id AS product_id,
-    COALESCE(SUM(quantity), 0) AS total_in
-  FROM fabric_incoming
-  GROUP BY fabric_id
+    SELECT 
+        fabric_id AS product_id,
+        COALESCE(SUM(quantity), 0) AS total_in
+    FROM fabric_incoming
+    GROUP BY fabric_id
 ),
+
 usage AS (
-  SELECT
-    fabric_id AS product_id,
-    COALESCE(SUM(used_quantity), 0) AS total_used
-  FROM garment_fabric_usage
-  GROUP BY fabric_id
+    SELECT 
+        fabric_id AS product_id,
+        COALESCE(SUM(used_quantity), 0) AS total_used
+    FROM garment_fabric_usage
+    GROUP BY fabric_id
+),
+
+last_tx AS (
+    -- 合并所有布料相关交易的时间戳，取最新的那一条作为最后异动时间
+    SELECT 
+        fabric_id, 
+        MAX(ts) AS last_transaction_at
+    FROM (
+        SELECT fabric_id, received_at AS ts FROM fabric_incoming
+        UNION ALL
+        SELECT fabric_id, used_at      AS ts FROM garment_fabric_usage
+    ) AS combined_transactions
+    GROUP BY fabric_id
 )
+
 SELECT
-  p.id AS fabric_id,          -- ⭐ 正确：保持这个给前端使用
-  p.sku,
-  p.name AS fabric_name,
-  p.material,
-  p.pattern,
-  p.width_cm,
+    p.id                                      AS fabric_id,
+    p.sku,
+    p.name                                    AS fabric_name,
+    p.material,
+    p.pattern,
+    p.width_cm,
 
-  COALESCE(i.total_in, 0) AS total_in,
-  COALESCE(u.total_used, 0) AS total_used,
+    COALESCE(i.total_in, 0)                   AS total_in,
+    COALESCE(u.total_used, 0)                 AS total_used,
+    COALESCE(i.total_in, 0) - COALESCE(u.total_used, 0) AS stock_balance,
 
-  COALESCE(i.total_in, 0) - COALESCE(u.total_used, 0) AS stock_balance
+    -- 最后更新时间：有交易记录取最近交易时间，无记录则取产品创建时间
+    COALESCE(t.last_transaction_at, p.created_at) AS last_updated
+
 FROM products p
-LEFT JOIN incoming i ON i.product_id = p.id
-LEFT JOIN usage u ON u.product_id = p.id
+LEFT JOIN incoming  i ON i.product_id = p.id
+LEFT JOIN usage     u ON u.product_id = p.id
+LEFT JOIN last_tx   t ON t.fabric_id  = p.id
 WHERE p.product_type = 'fabric'
 ORDER BY p.sku ASC;
 
+----------------------------------------------------------------------
+-- 33. 成衣库存自动同步触发器 (核心逻辑)
+----------------------------------------------------------------------
 
-/* ===========================================================
-   TEST DATA BLOCK — DISABLED
-   Verified by: Vincent Yu
-   Verified on: 2025-11-23
-   Status: DISABLED
+-- ==========================================
+-- 1. 成衣入库 (Garment Incoming) -> 更新 Stock Levels
+-- ==========================================
+DROP TRIGGER IF EXISTS trg_garment_incoming_update_stock;
 
-   说明：
-   - 此区块已完全注释，不会执行任何测试插入或查询
-   - 可在需要调试时手动取消注释
-   =========================================================== */
+CREATE TRIGGER trg_garment_incoming_update_stock
+AFTER INSERT ON garment_incoming
+FOR EACH ROW
+BEGIN
+    -- 插入或更新库存表
+    INSERT INTO stock_levels (product_id, quantity_on_hand, last_updated)
+    VALUES (NEW.garment_id, NEW.quantity, datetime('now'))
+    ON CONFLICT(product_id) DO UPDATE SET
+        quantity_on_hand = quantity_on_hand + NEW.quantity,
+        last_updated = datetime('now');
 
--- =======================
--- 0. 创建测试用户
--- =======================
+    -- 【可选】如果需要审计，可以在这里也插入 inventory_transactions
+    -- 但通常入库本身就有记录，不需要重复插入 transaction
+END;
 
--- INSERT INTO users (full_name, phone, email, position_id, password_hash, must_change_password)
--- VALUES ('Test Admin', '0200000000', 'admin@test.com',
---         (SELECT id FROM positions WHERE name='Head'),
---         'testhash', 0);
+-- ==========================================
+-- 2. 零售订单确认 (Confirmed) -> 扣减库存
+-- ==========================================
+DROP TRIGGER IF EXISTS trg_retail_order_confirm_reduce_stock;
 
--- INSERT INTO users (full_name, phone, email, position_id, password_hash, must_change_password)
--- VALUES ('Test Sales', '0211111111', 'sales@test.com',
---         (SELECT id FROM positions WHERE name='Sales'),
---         'testhash', 0);
+CREATE TRIGGER trg_retail_order_confirm_reduce_stock
+AFTER UPDATE ON retail_orders
+FOR EACH ROW
+WHEN NEW.status = 'confirmed' AND OLD.status != 'confirmed'
+BEGIN
+    -- 1. 扣减库存 (批量处理订单内所有商品)
+    UPDATE stock_levels
+    SET 
+        quantity_on_hand = quantity_on_hand - (
+            SELECT SUM(roi.quantity)
+            FROM retail_order_items roi
+            WHERE roi.order_id = NEW.id 
+            AND roi.product_id = stock_levels.product_id
+        ),
+        last_updated = datetime('now')
+    WHERE product_id IN (
+        SELECT DISTINCT product_id 
+        FROM retail_order_items 
+        WHERE order_id = NEW.id
+    );
 
+    -- 2. 插入库存交易流水 (Transaction Log)
+    INSERT INTO inventory_transactions (
+        product_id, transaction_type, quantity_change, 
+        reference_type, reference_id, reason, operated_by, created_at
+    )
+    SELECT 
+        roi.product_id,
+        'out',
+        -roi.quantity,  -- 负数表示减少
+        'retail_order',
+        NEW.id,
+        'Retail sale confirmed',
+        NEW.confirmed_by,
+        datetime('now')
+    FROM retail_order_items roi
+    WHERE roi.order_id = NEW.id;
+END;
 
--- =======================
--- 1. Customers
--- =======================
+-- ==========================================
+-- 3. 零售订单取消 (Cancelled) -> 回补库存
+-- ==========================================
+DROP TRIGGER IF EXISTS trg_retail_order_cancel_restore_stock;
 
--- INSERT INTO customers (full_name, phone, email)
--- VALUES ('John Doe', '0220000000', 'john@example.com'),
---        ('Mary GroupLeader', '0221111111', 'mary@example.com');
+CREATE TRIGGER trg_retail_order_cancel_restore_stock
+AFTER UPDATE ON retail_orders
+FOR EACH ROW
+WHEN NEW.status = 'cancelled' AND OLD.status = 'confirmed'
+BEGIN
+    -- 1. 回补库存
+    UPDATE stock_levels
+    SET 
+        quantity_on_hand = quantity_on_hand + (
+            SELECT SUM(roi.quantity)
+            FROM retail_order_items roi
+            WHERE roi.order_id = NEW.id 
+            AND roi.product_id = stock_levels.product_id
+        ),
+        last_updated = datetime('now')
+    WHERE product_id IN (
+        SELECT DISTINCT product_id 
+        FROM retail_order_items 
+        WHERE order_id = NEW.id
+    );
 
+    -- 2. 插入回补流水
+    INSERT INTO inventory_transactions (
+        product_id, transaction_type, quantity_change, 
+        reference_type, reference_id, reason, operated_by, created_at
+    )
+    SELECT 
+        roi.product_id,
+        'in',
+        roi.quantity,   -- 正数表示增加
+        'retail_order_cancelled',
+        NEW.id,
+        'Order cancelled - stock restored',
+        NEW.confirmed_by,
+        datetime('now')
+    FROM retail_order_items roi
+    WHERE roi.order_id = NEW.id;
+END;
 
--- =======================
--- 2. Products（Fabric + Garment）
--- =======================
+-- ==========================================
+-- 4. 手动库存交易 -> 同步更新 Stock Levels
+-- (用于 Inventory Adjustment 或盘点)
+-- ==========================================
+DROP TRIGGER IF EXISTS trg_inventory_trans_update_stock;
 
--- INSERT INTO products (sku, name, category_id, product_type, material, pattern, width_cm, unit, base_price)
--- VALUES ('FAB-001', 'Blue Cotton', (SELECT id FROM product_categories WHERE code='fabric'),
---         'fabric', 'Cotton', 'Solid', 150, 'meter', 12.5);
+CREATE TRIGGER trg_inventory_trans_update_stock
+AFTER INSERT ON inventory_transactions
+FOR EACH ROW
+-- 仅处理成衣，且排除掉上面已经处理过的零售订单，防止双重计算
+WHEN NEW.product_id IN (SELECT id FROM products WHERE product_type = 'garment')
+AND NEW.reference_type NOT IN ('retail_order', 'retail_order_cancelled')
+BEGIN
+    INSERT INTO stock_levels (product_id, quantity_on_hand, last_updated)
+    VALUES (NEW.product_id, NEW.quantity_change, datetime('now'))
+    ON CONFLICT(product_id) DO UPDATE SET
+        quantity_on_hand = quantity_on_hand + NEW.quantity_change,
+        last_updated = datetime('now');
+END;
 
--- INSERT INTO products (sku, name, category_id, product_type, fabric_id, style, gender, size_label, color, base_price)
--- VALUES ('GAR-001', 'School Shirt', 
---         (SELECT id FROM product_categories WHERE code='boys'),
---         'garment',
---         (SELECT id FROM products WHERE sku='FAB-001'),
---         'shirt', 'boys', 'M', 'white', 35);
+-- ==========================================
+-- 5. 防止库存为负数 (可选，根据业务需求启用)
+-- ==========================================
+DROP TRIGGER IF EXISTS trg_prevent_negative_stock;
 
+CREATE TRIGGER trg_prevent_negative_stock
+BEFORE UPDATE ON stock_levels
+FOR EACH ROW
+WHEN NEW.quantity_on_hand < 0
+BEGIN
+    -- 如果允许负库存（允许超卖），请注释掉下面这行
+    SELECT RAISE(ABORT, 'Insufficient stock: cannot reduce below zero');
+END;
 
--- =======================
--- 3. Fabric Incoming / Usage
--- =======================
-
--- INSERT INTO fabric_incoming (fabric_id, quantity, unit_price, supplier_name, created_by)
--- VALUES ((SELECT id FROM products WHERE sku='FAB-001'), 50, 8.5, 'ABC Supplier',
---         (SELECT id FROM users WHERE email='admin@test.com'));
-
--- INSERT INTO garment_fabric_usage (fabric_id, garment_id, used_quantity, operated_by)
--- VALUES ((SELECT id FROM products WHERE sku='FAB-001'),
---         (SELECT id FROM products WHERE sku='GAR-001'),
---         1.8,
---         (SELECT id FROM users WHERE email='sales@test.com'));
-
-
--- =======================
--- 4. Stock Levels
--- =======================
-
--- INSERT INTO stock_levels (product_id, quantity_on_hand, reorder_point)
--- VALUES ((SELECT id FROM products WHERE sku='GAR-001'), 15, 5);
-
-
--- =======================
--- 5. Retail Orders + Items
--- =======================
-
--- INSERT INTO retail_orders (order_number, customer_id, subtotal, total_amount, created_by)
--- VALUES ('RO-TEST-0001',
---         (SELECT id FROM customers WHERE email='john@example.com'),
---         35, 35,
---         (SELECT id FROM users WHERE email='sales@test.com'));
-
--- INSERT INTO retail_order_items (order_id, product_id, quantity, unit_price, subtotal)
--- VALUES (
---   (SELECT id FROM retail_orders WHERE order_number='RO-TEST-0001'),
---   (SELECT id FROM products WHERE sku='GAR-001'),
---   1, 35, 35
--- );
-
-
--- =======================
--- 6. Payments
--- =======================
-
--- INSERT INTO payments (order_type, order_id, payment_type, payment_method, amount, received_by)
--- VALUES ('retail',
---         (SELECT id FROM retail_orders WHERE order_number='RO-TEST-0001'),
---         'full', 'cash', 35,
---         (SELECT id FROM users WHERE email='sales@test.com'));
-
-
--- =======================
--- Validation Queries
--- =======================
-
--- SELECT '=== Row Counts ===' AS section;
--- SELECT 'users', COUNT(*) FROM users
--- UNION ALL SELECT 'customers', COUNT(*) FROM customers
--- UNION ALL SELECT 'products', COUNT(*) FROM products
--- UNION ALL SELECT 'fabric_incoming', COUNT(*) FROM fabric_incoming
--- UNION ALL SELECT 'garment_fabric_usage', COUNT(*) FROM garment_fabric_usage
--- UNION ALL SELECT 'stock_levels', COUNT(*) FROM stock_levels
--- UNION ALL SELECT 'retail_orders', COUNT(*) FROM retail_orders
--- UNION ALL SELECT 'retail_order_items', COUNT(*) FROM retail_order_items
--- UNION ALL SELECT 'payments', COUNT(*) FROM payments;
-
--- SELECT '=== v_stock_levels ===' AS section;
--- SELECT * FROM v_stock_levels;
-
--- SELECT '=== v_fabric_stock ===' AS section;
--- SELECT * FROM v_fabric_stock;
-
--- SELECT '=== v_inventory_summary ===' AS section;
--- SELECT * FROM v_inventory_summary;
-
--- SELECT '=== audit_logs (should be empty) ===' AS section;
--- SELECT COUNT(*) FROM audit_logs;
-
-
--- ===========================================================
--- END OF DISABLED TEST BLOCK
--- ===========================================================
+----------------------------------------------------------------------
+-- End of init-db.sql

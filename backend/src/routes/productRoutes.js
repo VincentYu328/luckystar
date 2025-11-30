@@ -249,52 +249,151 @@ router.delete(
     }
 );
 
-
 /**
  * ======================================================
- * 布料库存：incoming / usage / stock
+ * 库存管理（新增/对齐）
  * ======================================================
  */
 
-// 公开访问 - 查看布料库存
-router.get('/fabric/stock', async (req, res) => { // ✅ Already async
+// ------------------------------------------------------
+// 1. 库存列表查询 (Stock Queries)
+// ------------------------------------------------------
+
+// 公开访问 - 查看布料库存 (GET /products/fabric/stock)
+router.get('/fabric/stock', async (req, res) => {
     try {
-        const list = await ProductService.getAllFabricStock(); // ✅ Already awaited
-        res.json({ count: list.length, stock: list });
+        const list = await ProductService.getAllFabricStock();
+        res.json({ count: list.length, stock: list }); // 返回键名 'stock'
     } catch (err) {
-        console.error("Error fetching fabric stock:", err); // Add error log
+        console.error("Error fetching fabric stock:", err);
         res.status(500).json({ error: "Failed to fetch fabric stock." });
     }
 });
 
-// 需要认证 - 记录布料入库
+// ⭐ 新增/对齐：公开访问 - 查看成衣库存 (GET /products/garment/stock)
+router.get('/garment/stock', async (req, res) => {
+    try {
+        const list = await ProductService.getAllGarmentStock();
+        res.json({ count: list.length, stock: list }); // 返回键名 'stock'
+    } catch (err) {
+        console.error("Error fetching garment stock:", err);
+        res.status(500).json({ error: "Failed to fetch garment stock." });
+    }
+});
+
+
+// ------------------------------------------------------
+// 2. 布料操作 (Fabric Operations)
+// ------------------------------------------------------
+
+// 需要认证 - 记录布料入库 (POST /products/fabric/incoming)
 router.post(
     '/fabric/incoming',
     requireAuth,
     requirePermission('inventory.in'),
-    async (req, res) => { // ✅ Made async
+    async (req, res) => {
         try {
-            const result = await ProductService.recordFabricIncoming(req.user.id, req.body); // ✅ Await Service call
+            const result = await ProductService.recordFabricIncoming(req.user.id, req.body);
             res.status(201).json(result);
         } catch (err) {
-            console.error('Error recording fabric incoming:', err); // Add error log
+            console.error('Error recording fabric incoming:', err);
             res.status(400).json({ error: err.message });
         }
     }
 );
 
-// 需要认证 - 记录布料使用
+// 需要认证 - 记录布料使用/出库 (POST /products/fabric/usage)
 router.post(
     '/fabric/usage',
     requireAuth,
     requirePermission('inventory.out'),
-    async (req, res) => { // ✅ Made async
+    async (req, res) => {
         try {
-            const result = await ProductService.recordFabricUsage(req.user.id, req.body); // ✅ Await Service call
+            const result = await ProductService.recordFabricUsage(req.user.id, req.body);
             res.status(201).json(result);
         } catch (err) {
-            console.error('Error recording fabric usage:', err); // Add error log
+            console.error('Error recording fabric usage:', err);
             res.status(400).json({ error: err.message });
+        }
+    }
+);
+
+
+// ------------------------------------------------------
+// 3. 成衣操作 (Garment Operations)
+// ------------------------------------------------------
+
+// 记录成衣入库批次 (POST /products/garment/incoming)
+router.post(
+    '/garment/incoming',
+    requireAuth,
+    requirePermission('inventory.in'),
+    async (req, res) => {
+        try {
+            const result = await ProductService.recordGarmentIncoming(req.user.id, req.body);
+            res.status(201).json(result);
+        } catch (err) {
+            console.error('Error recording garment incoming:', err);
+            res.status(400).json({ error: err.message });
+        }
+    }
+);
+
+router.post(
+    '/garment/sale',
+    requireAuth,
+    requirePermission('inventory.out'),
+    async (req, res) => {
+        try {
+            // 确保 Service 层返回的是 { success: true, id: X }
+            const result = await ProductService.recordGarmentSale(req.user.id, req.body);
+
+            // ✅ 成功：返回 201 Created，将 Service 的结构化结果作为 JSON 响应体
+            res.status(201).json(result); 
+
+        } catch (err) {
+            // 失败：捕获 Service 层抛出的任何错误（如库存不足、校验失败）
+            console.error('[ROUTE ERROR] recordGarmentSale:', err.message, err.stack);
+            
+            // 返回 400 Bad Request，将错误信息传给前端
+            res.status(400).json({ error: err.message });
+        }
+    }
+);
+
+
+// ------------------------------------------------------
+// 4. 唯一项及通用库存操作 (Unique Items & General)
+// ------------------------------------------------------
+
+// 创建单个唯一库存项/条码 (POST /products/inventory/item)
+router.post(
+    '/inventory/item',
+    requireAuth,
+    requirePermission('inventory.in'),
+    async (req, res) => {
+        try {
+            const result = await ProductService.createUniqueItem(req.user.id, req.body);
+            res.status(201).json(result);
+        } catch (err) {
+            console.error('Error creating unique inventory item:', err);
+            res.status(400).json({ error: err.message });
+        }
+    }
+);
+
+// 通过条码查找唯一项详情 (GET /products/inventory/item/:uniqueCode)
+router.get(
+    '/inventory/item/:uniqueCode',
+    requireAuth,
+    requirePermission('inventory.view'),
+    async (req, res) => {
+        try {
+            const itemDetails = await ProductService.getUniqueItemDetails(req.params.uniqueCode);
+            res.json(itemDetails);
+        } catch (err) {
+            console.error(`Error fetching unique item ${req.params.uniqueCode}:`, err);
+            res.status(404).json({ error: err.message });
         }
     }
 );

@@ -11,10 +11,12 @@ export async function load({ locals }) {
         throw error(403);
     }
 
+    // ⭐ 修正：根据后端的路由定义（通常返回 { count, stock: list }）
     const res = await api.inventory.fabricList();
 
     return {
-        fabrics: Array.isArray(res.items) ? res.items : [],
+        // ⭐ 确保使用正确的键名！假设后端返回的列表键是 'stock'
+        fabrics: Array.isArray(res.stock) ? res.stock : [],
         user: user
     };
 }

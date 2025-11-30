@@ -4,7 +4,7 @@ import CustomersDAO from '../data/customers-dao.js';
 import UsersDAO from '../data/users-dao.js';
 import MeasurementsDAO from '../data/measurements-dao.js';
 import MeasurementService from './measurementService.js';
-import bcrypt from 'bcrypt';
+import { hashPassword, comparePassword } from '../utils/password.js';
 
 class CustomerService {
 
@@ -42,7 +42,7 @@ class CustomerService {
             throw new Error('Password is required for creating customer');
         }
 
-        const password_hash = await bcrypt.hash(password, 10);
+        const password_hash = await hashPassword(password);
 
         const result = CustomersDAO.createCustomer({
             ...payload,
@@ -73,7 +73,7 @@ class CustomerService {
         if (!existing) throw new Error('Customer not found');
 
         if (fields.password) {
-            fields.password_hash = await bcrypt.hash(fields.password, 10);
+            fields.password_hash = await hashPassword(fields.password);
             delete fields.password;
         }
 

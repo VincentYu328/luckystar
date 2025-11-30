@@ -19,6 +19,7 @@
     "reset:dev": "bash scripts/reset-dev.sh"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.4.6",
     "multer": "^2.0.2"
   }

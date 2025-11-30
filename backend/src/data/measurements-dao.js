@@ -13,11 +13,8 @@ class MeasurementsDAO {
     return db.prepare(`
       SELECT 
         m.*,
-        -- 拼接客户全名
-        (c.first_name || ' ' || c.last_name) as customer_name,
-        -- 获取性别
-        c.gender,
-        -- 将 measured_at 重命名为 updated_at 以匹配前端
+        c.full_name as customer_name,
+        NULL as gender,
         m.measured_at as updated_at
       FROM measurements m
       LEFT JOIN customers c ON m.customer_id = c.id

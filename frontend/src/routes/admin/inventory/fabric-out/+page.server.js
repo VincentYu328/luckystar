@@ -10,8 +10,8 @@ export async function load({ locals }) {
     const garmentRes = await api.inventory.garmentList();
 
     return {
-        fabrics: Array.isArray(fabricRes.items) ? fabricRes.items : [],
-        garments: Array.isArray(garmentRes.items) ? garmentRes.items : [],
+        fabrics: Array.isArray(fabricRes.stock) ? fabricRes.stock : [], // 修正为 'stock'
+        garments: Array.isArray(garmentRes.stock) ? garmentRes.stock : [], // 修正为 'stock'
         user
     };
 }
@@ -52,8 +52,8 @@ export const actions = {
             };
         }
 
-        console.log("➡️ Calling API: inventory.fabricOut()");
-        const res = await api.inventory.fabricOut(payload);
+        console.log("➡️ Calling API: inventory.fabricUsage()");
+        const res = await api.inventory.fabricUsage(payload);
 
         console.log("📨 API Response:", res);
 

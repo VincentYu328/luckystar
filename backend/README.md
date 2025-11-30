@@ -483,21 +483,28 @@ frontend/
 │   │   │   │           ├── +page.server.js
 │   │   │   │           └── +page.svelte
 │   │   │
-│   │   │   ├── inventory/
-│   │   │   │   ├── +page.server.js
-│   │   │   │   ├── +page.svelte
-│   │   │   │   ├── transactions/
-│   │   │   │   │   ├── +page.server.js
-│   │   │   │   │   └── +page.svelte
-│   │   │   │   ├── in/
-│   │   │   │   │   ├── +page.server.js
-│   │   │   │   │   └── +page.svelte
-│   │   │   │   ├── out/
-│   │   │   │   │   ├── +page.server.js
-│   │   │   │   │   └── +page.svelte
-│   │   │   │   └── adjust/
-│   │   │       └── +page.svelte
-│   │   │
+│   │   │   ├── inventory/
+│   │   │   │   ├── +page.server.js
+│   │   │   │   ├── +page.svelte           // 1. 库存总览页
+│   │   │   │   ├── transactions/
+│   │   │   │   │   ├── +page.server.js    // 2. 库存流水逻辑
+│   │   │   │   │   └── +page.svelte       // 3. 库存流水页面
+│   │   │   │   ├── fabric-in/                     // 4. 【布料】入库 (Fabric Incoming)
+│   │   │   │   │   ├── +page.server.js
+│   │   │   │   │   └── +page.svelte
+│   │   │   │   ├── fabric-out/                    // 5. 【布料】使用 (Fabric Usage)
+│   │   │   │   │   ├── +page.server.js
+│   │   │   │   │   └── +page.svelte
+│   │   │   │   ├── garment-in/           // ⭐ 6. 【新增】成衣入库 (Garment Incoming)
+│   │   │   │   │   ├── +page.server.js
+│   │   │   │   │   └── +page.svelte
+│   │   │   │   ├── garment-out/          // ⭐ 7. 【新增】成衣销售 (Garment Sales/Out)
+│   │   │   │   │   ├── +page.server.js
+│   │   │   │   │   └── +page.svelte
+│   │   │   │   └── adjust/
+│   │   │       └── +page.svelte
+│
+│
 │   │   │   ├── retail-orders/
 │   │   │   │   ├── +page.server.js
 │   │   │   │   ├── +page.svelte

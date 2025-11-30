@@ -1,11 +1,12 @@
-// src/lib/server/api.js
 // ===============================
-//  LuckyStar 全站通用 API 封装（2025）
+//  LuckyStar 全站通用 API 封装（2025）
 // ===============================
+
+// ... (requestWithContext, request, BASE_URL, globalFetch, initApi 函数保持不变)
 
 async function requestWithContext(method, path, data = null, extraHeaders = {}, queryParams = {}, context = null) {
     const fetchToUse = context?.fetch || globalFetch;
-    
+
     if (!fetchToUse) {
         throw new Error('API not initialized: 请在 hooks.server.js 中调用 initApi(event.fetch)');
     }
@@ -143,7 +144,7 @@ async function request(method, path, data = null, extraHeaders = {}, queryParams
 }
 
 // ============================================
-//  对外暴露的统一 API 对象
+//  对外暴露的统一 API 对象
 // ============================================
 export const api = {
     // ---- 基础 HTTP 方法 ----
@@ -169,23 +170,78 @@ export const api = {
         get(id) { return request('GET', `/products/${id}`); },
         listCategories() { return request('GET', '/products/categories'); },
         images(id) { return request('GET', `/products/${id}/images`); },
-        stock(id) { return request('GET', `/products/${id}/stock`); },
+        // ❌ 修正：删除错误的 stock(id) 方法
+        // stock(id) { return request('GET', `/products/${id}/stock`); }, 
         create(data) { return request('POST', '/products', data); },
         update(id, data) { return request('PUT', `/products/${id}`, data); },
         delete(id) { return request('DELETE', `/products/${id}`); },
         addImage(id, data) { return request('POST', `/products/${id}/images`, data); },
         updateImage(imgId, data) { return request('PUT', `/products/images/${imgId}`, data); },
         deleteImage(imgId) { return request('DELETE', `/products/images/${imgId}`); },
+
+        // ⭐ 新增：成衣入库批次 (对应 POST /products/garment/incoming)
+        recordGarmentIncoming(data) { return request('POST', '/products/garment/incoming', data); },
+
+        // ⭐ 新增：创建唯一项/条码 (对应 POST /products/inventory/item)
+        createUniqueItem(data) { return request('POST', '/products/inventory/item', data); },
+
+        // ⭐ 新增：通过条码查询唯一项 (对应 GET /products/inventory/item/:uniqueCode)
+        getUniqueItemByCode(uniqueCode) { return request('GET', `/products/inventory/item/${uniqueCode}`); },
     },
 
     // ---------------- INVENTORY ----------------
     inventory: {
-        fabricList() { return request('GET', '/inventory/fabric'); },
-        garmentList() { return request('GET', '/inventory/garments'); },
-        transactions() { return request('GET', '/inventory/transactions'); },
-        fabricIn(data) { return request('POST', '/inventory/in', data); },
-        fabricOut(data) { return request('POST', '/inventory/out', data); },
-        adjust(data) { return request('POST', '/inventory/adjust', data); },
+        // 库存列表查询 (GET)
+        fabricList() {
+            return request('GET', '/products/fabric/stock');
+        },
+        garmentList() {
+            return request('GET', '/products/garment/stock');
+        },
+
+        // 布料操作 (POST) —— 统一加上类型防御
+        fabricIn(payload) {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                throw new Error('api.inventory.fabricIn() 参数必须是对象，例如 { fabricId: 12, quantity: 50, unit: "m" }');
+            }
+            return request('POST', '/products/fabric/incoming', payload);
+        },
+
+        fabricUsage(payload) {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                throw new Error('api.inventory.fabricUsage() 参数必须是对象，例如 { fabricId: 12, quantity: 3.5, garmentId: 88 }');
+            }
+            return request('POST', '/products/fabric/usage', payload);
+        },
+
+        /**
+         * 成衣销售 / 出库
+         * 只要传入对象就不会再出现 “Unexpected token '1'” 错误
+         */
+        garmentSale(payload) {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                throw new Error(
+                    'api.inventory.garmentSale() 参数必须是对象！\n' +
+                    '正确示例：\n' +
+                    '  { garmentId: 123, quantity: 1 }\n' +
+                    '  或 { uniqueCode: "GC20250123", customerId: 99, remark: "零售" }'
+                );
+            }
+            return request('POST', '/products/garment/sale', payload);
+        },
+
+        // 通用库存调整（手动改库存、报损、盘点等）
+        adjust(payload) {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                throw new Error('api.inventory.adjust() 参数必须是对象，例如 { garmentId: 123, diff: -1, reason: "报损" }');
+            }
+            return request('POST', '/inventory/adjust', payload);
+        },
+
+        // 交易/出入库记录
+        transactions() {
+            return request('GET', '/inventory/transactions');
+        },
     },
 
     // ---------------- RETAIL ORDERS ----------------
@@ -194,6 +250,17 @@ export const api = {
         pending() { return request('GET', '/retail-orders/pending'); },
         get(id) { return request('GET', `/retail-orders/${id}`); },
         create(data) { return request('POST', '/retail-orders', data); },
+
+        // ⭐ 新增: 通用更新订单信息 (对应 PUT 请求)
+        update(id, data) {
+            return request('PUT', `/retail-orders/${id}`, data);
+        },
+
+        // ⭐ 新增: 删除订单 (对应 DELETE 请求)
+        delete(id) {
+            return request('DELETE', `/retail-orders/${id}`);
+        },
+
         confirm(id) { return request('POST', `/retail-orders/${id}/confirm`); },
         complete(id) { return request('POST', `/retail-orders/${id}/complete`); },
     },
@@ -218,30 +285,48 @@ export const api = {
         profile() { return request('GET', '/customers/me/profile'); },
         orders() { return request('GET', '/customers/me/orders'); },
         order(id) { return request('GET', `/customers/me/orders/${id}`); },
-        
-        measurements(context = null) { 
-            return context 
+
+        measurements(context = null) {
+            return context
                 ? requestWithContext('GET', '/customers/me/measurements', null, {}, {}, context)
-                : request('GET', '/customers/me/measurements'); 
+                : request('GET', '/customers/me/measurements');
         },
-        
-        saveMeasurements(data, context = null) { 
+
+        saveMeasurements(data, context = null) {
             return context
                 ? requestWithContext('PUT', '/customers/me/measurements', data, {}, {}, context)
-                : request('PUT', '/customers/me/measurements', data); 
+                : request('PUT', '/customers/me/measurements', data);
         },
     },
 
 
     // ---------------- CUSTOMERS ----------------
     customers: {
-        list(queryParams = {}) {
-            return request('GET', '/customers', null, {}, queryParams);
+        list(queryParams = {}, context = null) {
+            return context
+                ? requestWithContext('GET', '/customers', null, {}, queryParams, context)
+                : request('GET', '/customers', null, {}, queryParams);
         },
-        get(id) { return request('GET', `/customers/${id}`); },
-        create(data) { return request('POST', '/customers', data); },
-        update(id, data) { return request('PUT', `/customers/${id}`, data); },
-        delete(id) { return request('DELETE', `/customers/${id}`); },
+        get(id, context = null) {
+            return context
+                ? requestWithContext('GET', `/customers/${id}`, null, {}, {}, context)
+                : request('GET', `/customers/${id}`);
+        },
+        create(data, context = null) {
+            return context
+                ? requestWithContext('POST', '/customers', data, {}, {}, context)
+                : request('POST', '/customers', data);
+        },
+        update(id, data, context = null) {
+            return context
+                ? requestWithContext('PUT', `/customers/${id}`, data, {}, {}, context)
+                : request('PUT', `/customers/${id}`, data);
+        },
+        delete(id, context = null) {
+            return context
+                ? requestWithContext('DELETE', `/customers/${id}`, null, {}, {}, context)
+                : request('DELETE', `/customers/${id}`);
+        },
         groupOrders(id) { return request('GET', `/customers/${id}/group-orders`); },
         groupOrder(id) { return request('GET', `/group-orders/${id}`); },
         createGroupOrder(data) { return request('POST', '/group-orders', data); },
